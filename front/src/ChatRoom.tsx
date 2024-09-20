@@ -30,11 +30,13 @@ const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState<string>('');
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [room, setRoom] = useState<string>('default-room');
+  const [room, setRoom] = useState<string| null>(null);
   const [id] = useState<string>(localStorage.getItem('uid') || uuidv4());
   const [showParticipants, setShowParticipants] = useState<boolean>(false);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [newChatName, setNewChatName] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
 
   useEffect(() => {
     const darkMode = localStorage.getItem('dark') === 'dark';
@@ -45,7 +47,7 @@ const ChatRoom: React.FC = () => {
     }
 
     const queryRoom = new URLSearchParams(window.location.search).get('room');
-    const roomName = queryRoom || 'default-room';
+    const roomName = queryRoom || 'Main Lobby';
     setRoom(roomName);
 
     document.title = `Chat - ${roomName} | Chat Anywhere`;
@@ -59,7 +61,7 @@ const ChatRoom: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!socket) {
+    if (!socket && room) {
       const newSocket = io(serverUrl, {
         path: '/api/socket',
         query: {
@@ -77,6 +79,11 @@ const ChatRoom: React.FC = () => {
       });
 
       setSocket(newSocket);
+
+      newSocket.on('connect_error', (err) => {
+        setErrorMessage(`Failed to connect: ${err.message}. \nTry again later.`);
+        setShowErrorModal(true);
+      });
 
       newSocket.on('message', (msg: Message) => {
         setMessages((prevMessages) => [...prevMessages, { ...msg }]);
@@ -240,6 +247,16 @@ const ChatRoom: React.FC = () => {
           <IoMdSend className='w-8 h-8 text-gray-600 dark:text-gray-300' />
         </button>
       </div>
+
+      {showErrorModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white dark:bg-gray-800 p-5 rounded-md shadow-lg">
+            <h2 className="text-lg text-gray-800 dark:text-gray-100 font-bold mb-2">Connection Error</h2>
+            <p className="text-gray-800 dark:text-gray-100 mb-4">{errorMessage}</p>
+            <button onClick={() => window.location.reload()} className="w-full px-4 py-2 bg-green-500 text-white rounded-md">Refresh</button>
+          </div>
+        </div>
+      )}
 
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
