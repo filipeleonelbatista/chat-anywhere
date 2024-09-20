@@ -19,7 +19,7 @@ interface Participant {
 }
 
 const serverUrl = process.env.NODE_ENV === 'production'
-  ? 'https://chat-anywhere.onrender.com:10000/'
+  ? 'https://chat-anywhere.onrender.com/'
   : 'http://localhost:3000';
 
 const ChatRoom: React.FC = () => {
