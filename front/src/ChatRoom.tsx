@@ -50,33 +50,76 @@ const ChatRoom: React.FC = () => {
 
     document.title = `Chat - ${roomName} | Chat Anywhere`;
 
-    setLoggedUser(localStorage.getItem('username') || 'Anonymous');
-    setAvatar(localStorage.getItem('avatar') || '👤');
+    const storedUsername = localStorage.getItem('username') || 'Anonymous';
+    const storedAvatar = localStorage.getItem('avatar') || '👤';
 
-    const newSocket = io(serverUrl, {
-      path: '/api/socket',
-      query: {
-        room: roomName,
-        user: loggedUser,
-        avatar: avatar,
-        id: id,
-      },
-    });
-    setSocket(newSocket);
+    setLoggedUser(storedUsername);
+    setAvatar(storedAvatar);
 
-    newSocket.on('message', (msg: Message) => {
-      setMessages((prevMessages) => [...prevMessages, { ...msg }]);
-    });
+  }, []);
 
-    newSocket.on('participants', (participantsList: Participant[]) => {
-      setParticipants(participantsList);
-    });
+  useEffect(() => {
+    if (!socket) {
+      const newSocket = io(serverUrl, {
+        path: '/api/socket',
+        query: {
+          room: room,
+          user: loggedUser,
+          avatar: avatar,
+          id: id,
+        },
+        transports: ['websocket'],
+        upgrade: false,
+        timeout: 30 * 60_000,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 3000,
+      });
 
-    return () => {
-      newSocket.close();
-      document.title = 'Chat Anywhere';
-    };
-  }, [avatar, loggedUser, room, id]);
+      setSocket(newSocket);
+
+      newSocket.on('message', (msg: Message) => {
+        setMessages((prevMessages) => [...prevMessages, { ...msg }]);
+      });
+
+      newSocket.on('user_joined', (participant) => {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            id: uuidv4(),
+            user: 'system',
+            avatar: '💬',
+            text: `${participant.avatar} ${participant.user} joined on this chat`,
+            time: getCurrentTime(),
+          },
+        ]);
+      });
+
+      newSocket.on('user_left', (participant) => {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            id: uuidv4(),
+            user: 'system',
+            avatar: '💬',
+            text: `${participant.avatar} ${participant.user} left this chat`,
+            time: getCurrentTime(),
+          },
+        ]);
+      });
+
+      newSocket.on('participants', (participantsList: Participant[]) => {
+        setParticipants(participantsList);
+      });
+
+      return () => {
+        if (newSocket) {
+          newSocket.disconnect();
+        }
+      };
+    }
+  }, [room, loggedUser, avatar]);
+
 
   function getCurrentTime() {
     const now = new Date();
@@ -145,14 +188,15 @@ const ChatRoom: React.FC = () => {
           </button>
           {showParticipants && (
             <div className="shadow-lg absolute z-10 top-12 right-16 bg-white dark:bg-gray-950 border rounded-md p-2 mt-1">
-              {participants.map((p) => (
-                <div key={p.id} className='flex flex-row items-center px-2 py-1 gap-2'>
+              {participants.map((p, idx) => (
+                <div key={idx} className='flex flex-row items-center px-2 py-1 gap-2'>
                   <span>{p.avatar}</span>
                   <span className='text-gray-800 dark:text-white'>{p.user}</span>
                 </div>
               ))}
             </div>
-          )}
+          )
+          }
           <button className='text-gray-800 dark:text-white px-2' onClick={toggleDarkMode}>
             {dark ? <IoSunnyOutline className='w-4 h-4 md:w-6 md:h-6' /> : <IoMoonOutline className='w-4 h-4 md:w-6 md:h-6' />}
           </button>
@@ -160,18 +204,27 @@ const ChatRoom: React.FC = () => {
       </header>
 
       <div className="flex flex-col flex-grow p-4 overflow-y-auto bg-[#e5ddd5] dark:bg-gray-950 gap-2">
-        {messages.map((msg, index) => (
-          <div className={`flex flex-row gap-2 items-start w-full ${msg.user === loggedUser ? 'flex-row' : 'flex-row-reverse'}`} key={index}>
-            <div className={`shadow-md flex text-2xl items-center justify-center w-10 h-10 rounded-full ${msg.user === loggedUser ? 'bg-green-300 dark:bg-green-700' : 'bg-gray-200 dark:bg-gray-600'}`}>
-              {msg.avatar || msg.user.substring(0, 1)}
+        {messages.map((msg, index) => {
+          if (msg.user == 'system') return (
+            <div key={index} className='w-full relative flex flex-row justify-center items-center'>
+              <p className='px-4 rounded-full border border-gray-800 text-gray-800 dark:border-gray-200 dark:text-gray-200'>{msg.text}</p>
+              <p className="absolute bottom-0 right-0 text-gray-800 dark:text-gray-200 text-xs text-right leading-none">{msg.time}</p>
             </div>
-            <div className={`w-11/12 md:w-full shadow-md my-1 p-2 gap-1 text-sm flex flex-col relative ${msg.user === loggedUser ? 'ml-auto rounded-lg rounded-tl-none bg-green-300 dark:bg-green-700' : 'mr-auto rounded-lg rounded-tr-none bg-gray-200 dark:bg-gray-600'}`}>
-              <p className='text-sm font-bold text-gray-800 dark:text-white'>{msg.user}</p>
-              <p className='text-gray-800 dark:text-white'>{msg.text}</p>
-              <p className="text-gray-800 dark:text-white text-xs text-right leading-none">{msg.time}</p>
+          )
+
+          return (
+            <div className={`flex flex-row gap-2 items-start w-full ${msg.user === loggedUser ? 'flex-row' : 'flex-row-reverse'}`} key={index}>
+              <div className={`shadow-md flex text-2xl items-center justify-center w-10 h-10 rounded-full ${msg.user === loggedUser ? 'bg-green-300 dark:bg-green-700' : 'bg-gray-200 dark:bg-gray-600'}`}>
+                {msg.avatar || msg.user.substring(0, 1)}
+              </div>
+              <div className={`w-11/12 md:w-full shadow-md my-1 p-2 gap-1 text-sm flex flex-col relative ${msg.user === loggedUser ? 'ml-auto rounded-lg rounded-tl-none bg-green-300 dark:bg-green-700' : 'mr-auto rounded-lg rounded-tr-none bg-gray-200 dark:bg-gray-600'}`}>
+                <p className='text-sm font-bold text-gray-800 dark:text-white'>{msg.user}</p>
+                <p className='text-gray-800 dark:text-white'>{msg.text}</p>
+                <p className="text-gray-800 dark:text-white text-xs text-right leading-none">{msg.time}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <div className="bg-gray-200 dark:bg-gray-800 p-4 flex items-center">
@@ -180,7 +233,7 @@ const ChatRoom: React.FC = () => {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Digite sua mensagem..."
+          placeholder="Type your message..."
           className="text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-700 flex-grow p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
         />
         <button onClick={sendMessage} className="ml-4">

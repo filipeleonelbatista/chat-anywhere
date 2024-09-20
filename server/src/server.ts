@@ -34,21 +34,21 @@ io.on('connection', (socket) => {
   const newParticipant: Participant = { id, user, avatar };
   participantsByRoom[room].push(newParticipant);
 
+  io.to(room).emit('user_joined', { id, user, avatar });
+
   io.to(room).emit('participants', participantsByRoom[room]);
 
-  // Listening for messages
   socket.on('message', (msg) => {
     io.to(room).emit('message', msg);
   });
 
-  // Handle disconnection
   socket.on('disconnect', () => {
     participantsByRoom[room] = participantsByRoom[room].filter(p => p.id !== id);
+    io.to(room).emit('user_left', { id, user, avatar });
     io.to(room).emit('participants', participantsByRoom[room]);
   });
 });
 
-// Start server
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);

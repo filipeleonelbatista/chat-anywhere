@@ -20,7 +20,7 @@ const AvatarSelection: React.FC<AvatarSelectionProps> = ({ setAvatar }) => {
           <button
             key={idx}
             onClick={() => handleSelect(av)}
-            className="shadow-md text-4xl p-4 border rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="shadow-md text-4xl p-4 border rounded-full hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500"
           >
             {av}
           </button>
