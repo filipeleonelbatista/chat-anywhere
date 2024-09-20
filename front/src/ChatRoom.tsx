@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState } from 'react';
 import { IoMdSend } from "react-icons/io";
 import { IoAdd, IoMoonOutline, IoSunnyOutline } from "react-icons/io5";
@@ -19,6 +17,10 @@ interface Participant {
   user: string;
   avatar: string;
 }
+
+const serverUrl = process.env.NODE_ENV === 'production'
+  ? 'https://seu-servidor-em-produção.com'
+  : 'http://localhost:3000';
 
 const ChatRoom: React.FC = () => {
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -46,10 +48,12 @@ const ChatRoom: React.FC = () => {
     const roomName = queryRoom || 'default-room';
     setRoom(roomName);
 
+    document.title = `Chat - ${roomName} | Chat Anywhere`;
+
     setLoggedUser(localStorage.getItem('username') || 'Anonymous');
     setAvatar(localStorage.getItem('avatar') || '👤');
 
-    const newSocket = io({
+    const newSocket = io(serverUrl, {
       path: '/api/socket',
       query: {
         room: roomName,
@@ -69,7 +73,8 @@ const ChatRoom: React.FC = () => {
     });
 
     return () => {
-      newSocket.close(); 
+      newSocket.close();
+      document.title = 'Chat Anywhere';
     };
   }, [avatar, loggedUser, room, id]);
 
@@ -186,17 +191,17 @@ const ChatRoom: React.FC = () => {
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white dark:bg-gray-800 p-5 rounded-md shadow-lg">
-            <h2 className="text-lg text-gray-800 dark:text-gray-100 font-bold mb-2">Criar Novo Chat</h2>
+            <h2 className="text-lg text-gray-800 dark:text-gray-100 font-bold mb-2">Create new chat</h2>
             <input
               type="text"
               value={newChatName}
               onChange={(e) => setNewChatName(e.target.value)}
-              placeholder="Nome do chat..."
+              placeholder="Chat name..."
               className="text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-700 flex-grow p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
             />
             <div className="flex justify-end mt-4 gap-2">
-              <button onClick={() => setShowModal(false)} className="w-full px-4 py-2 bg-transparent text-red-600 border border-red-600 rounded-md">Cancelar</button>
-              <button onClick={handleNewChat} className="w-full px-4 py-2 bg-green-500 text-white rounded-md">Entrar</button>
+              <button onClick={() => setShowModal(false)} className="w-full px-4 py-2 bg-transparent text-red-600 border border-red-600 rounded-md">Discard</button>
+              <button onClick={handleNewChat} className="w-full px-4 py-2 bg-green-500 text-white rounded-md">Create</button>
             </div>
           </div>
         </div>

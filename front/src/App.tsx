@@ -1,5 +1,3 @@
-"use client"
-
 import React, { useEffect, useState } from 'react';
 import AvatarSelection from './AvatarSelection';
 import ChatRoom from './ChatRoom';
