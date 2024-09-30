@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { IoMdSend } from "react-icons/io";
 import { IoAdd, IoMoonOutline, IoSunnyOutline } from "react-icons/io5";
 import { io, Socket } from 'socket.io-client';
@@ -30,13 +30,42 @@ const ChatRoom: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [message, setMessage] = useState<string>('');
   const [socket, setSocket] = useState<Socket | null>(null);
-  const [room, setRoom] = useState<string| null>(null);
+  const [room, setRoom] = useState<string | null>(null);
   const [id] = useState<string>(localStorage.getItem('uid') || uuidv4());
   const [showParticipants, setShowParticipants] = useState<boolean>(false);
   const [showModal, setShowModal] = useState<boolean>(false);
   const [newChatName, setNewChatName] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [showErrorModal, setShowErrorModal] = useState<boolean>(false);
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const fetchWithRetry = async (url: string, retries: number = 2): Promise<any> => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+      return await response.json();
+    } catch (error: any) {
+      if (retries > 0) {
+        console.log(`Retrying... attempts left: ${retries}`);
+        return fetchWithRetry(url, retries - 1);
+      } else {
+        throw error;
+      }
+    }
+  };
 
   useEffect(() => {
     const darkMode = localStorage.getItem('dark') === 'dark';
@@ -57,6 +86,15 @@ const ChatRoom: React.FC = () => {
 
     setLoggedUser(storedUsername);
     setAvatar(storedAvatar);
+
+    fetchWithRetry(`${serverUrl}`)
+    .then((data) => {
+      console.log('Data received from server:', data);
+    })
+    .catch((err) => {
+      setErrorMessage(`Failed to connect: ${err.message}. \nTry again later.`);
+      setShowErrorModal(true);
+    });
 
   }, []);
 
@@ -232,6 +270,7 @@ const ChatRoom: React.FC = () => {
             </div>
           )
         })}
+        <div ref={messagesEndRef}></div>
       </div>
 
       <div className="bg-gray-200 dark:bg-gray-800 p-4 flex items-center">

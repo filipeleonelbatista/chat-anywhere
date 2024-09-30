@@ -1,12 +1,16 @@
 import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
+import cors from 'cors';
 
 interface Participant {
   id: string;
   user: string;
   avatar: string;
 }
+const serverUrl = process.env.NODE_ENV === 'production'
+  ? 'https://chat-anywhere-two.vercel.app/'
+  : 'http://localhost:5173/';
 
 const app = express();
 const server = http.createServer(app);
@@ -17,7 +21,17 @@ const io = new Server(server, {
   },
 });
 
+app.use(cors());
+
 const participantsByRoom: { [room: string]: Participant[] } = {};
+
+app.get('/', (req, res) => {
+  res.json({
+    url: serverUrl, 
+    success: true,
+    message: 'Server is running smoothly. Access Application on URL.',
+  });
+});
 
 io.on('connection', (socket) => {
   const room = socket.handshake.query.room as string;
