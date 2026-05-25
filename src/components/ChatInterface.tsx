@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { useUser } from "@/context/UserContext";
 import { RoomProvider } from "@/context/RoomContext";
 import { useRoom } from "@/context/RoomContext";
@@ -7,6 +7,7 @@ import { UserRegistrationModal } from "./UserRegistrationModal";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
 import { ConnectionStatus } from "./ConnectionStatus";
+import { HelpModal } from "./HelpModal";
 import { uploadImage } from "@/lib/blob";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 
 function ChatContent({ roomId }: { roomId: string }) {
   const { user } = useUser();
+  const [helpOpen, setHelpOpen] = useState(false);
   const {
     messages,
     status,
@@ -33,7 +35,7 @@ function ChatContent({ roomId }: { roomId: string }) {
       const { url } = await uploadImage(file);
       sendMessage("", { imageUrl: url });
     } catch {
-      alert("Failed to upload image. Please try again.");
+      alert("Falha ao enviar imagem. Tente novamente.");
     }
   };
 
@@ -41,16 +43,26 @@ function ChatContent({ roomId }: { roomId: string }) {
     <div className="h-screen flex flex-col">
       {/* Header */}
       <div className="chat-header flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-xl">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-xl flex-shrink-0">
             {user!.avatar}
           </div>
-          <div>
-            <h1 className="font-semibold text-sm">#{roomId}</h1>
-            <p className="text-xs opacity-80">{user!.name}</p>
+          <div className="min-w-0">
+            <h1 className="font-semibold text-sm truncate">#{roomId}</h1>
+            <p className="text-xs opacity-80 truncate">{user!.name}</p>
           </div>
         </div>
-        <ConnectionStatus status={status} />
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => setHelpOpen(true)}
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 text-white transition-colors text-sm font-bold"
+            aria-label="Ajuda"
+            title="Como funciona"
+          >
+            ?
+          </button>
+          <ConnectionStatus status={status} />
+        </div>
       </div>
       {/* Messages */}
       <MessageList
@@ -66,6 +78,8 @@ function ChatContent({ roomId }: { roomId: string }) {
         onSendImage={handleSendImage}
         disabled={status.type === "disconnected"}
       />
+      {/* Help Modal */}
+      <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 }

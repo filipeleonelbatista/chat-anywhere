@@ -13,11 +13,12 @@ interface Props {
 
 export function LinkPreview({ url }: Props) {
   const [preview, setPreview] = useState<PreviewData | null>(null);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (!url) return;
+
     let cancelled = false;
-    setLoading(true);
+
     fetch("/api/link-preview", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -28,20 +29,14 @@ export function LinkPreview({ url }: Props) {
         if (!cancelled) setPreview(data);
       })
       .catch(() => {
-        if (!cancelled) setPreview(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+        // Keep previous preview on error
       });
+
     return () => {
       cancelled = true;
     };
   }, [url]);
 
-  if (loading)
-    return (
-      <div className="text-xs text-gray-400 mt-1">Loading preview...</div>
-    );
   if (!preview) return null;
 
   return (

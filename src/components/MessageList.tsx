@@ -24,19 +24,24 @@ export function MessageList({
   const [isAtBottom, setIsAtBottom] = React.useState(true);
   const [newCount, setNewCount] = React.useState(0);
   const prevLengthRef = useRef(messages.length);
+  const newMsgAccumRef = useRef(0);
 
   const scrollToBottom = useCallback(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
+  // Auto-scroll and track unseen messages.
+  // setNewCount is intentionally called here to sync accumulated ref to state.
   useEffect(() => {
     if (isAtBottom) {
       scrollToBottom();
-      setNewCount(0);
+      newMsgAccumRef.current = 0;
     } else if (messages.length > prevLengthRef.current) {
-      setNewCount((c) => c + (messages.length - prevLengthRef.current));
+      newMsgAccumRef.current +=
+        messages.length - prevLengthRef.current;
     }
     prevLengthRef.current = messages.length;
+    setNewCount(newMsgAccumRef.current);
   }, [messages.length, isAtBottom, scrollToBottom]);
 
   const handleScroll = useCallback(() => {
@@ -44,7 +49,10 @@ export function MessageList({
     if (!el) return;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
     setIsAtBottom(atBottom);
-    if (atBottom) setNewCount(0);
+    if (atBottom) {
+      newMsgAccumRef.current = 0;
+      setNewCount(0);
+    }
     if (el.scrollTop < 50 && hasMore && !loadingOlder) {
       onLoadOlder();
     }

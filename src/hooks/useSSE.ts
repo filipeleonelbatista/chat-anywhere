@@ -16,7 +16,8 @@ export function useSSE({ roomId, userId, onMessage }: UseSSEOptions) {
   const retryCountRef = useRef(0);
   const maxRetries = 10;
 
-  const connect = useCallback(() => {
+  // Named function expression allows safe recursive setTimeout reference
+  const connect = useCallback(function connectFn() {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
     }
@@ -52,7 +53,7 @@ export function useSSE({ roomId, userId, onMessage }: UseSSEOptions) {
           1000 * Math.pow(2, retryCountRef.current),
           30000
         );
-        setTimeout(connect, delay);
+        setTimeout(connectFn, delay);
       } else {
         setStatus({ type: "disconnected", message: "Connection lost" });
       }

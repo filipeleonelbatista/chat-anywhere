@@ -1,16 +1,43 @@
-"use client";
-import React from "react";
-import { UserProvider } from "@/context/UserContext";
-import { ChatInterface } from "@/components/ChatInterface";
+import type { Metadata } from "next";
+import RoomClient from "./room-client";
 
-export default function RoomPage({
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://chat-anywhere.vercel.app";
+
+export async function generateMetadata({
   params,
 }: {
-  params: { roomId: string };
+  params: Promise<{ roomId: string }>;
+}): Promise<Metadata> {
+  const { roomId: roomName } = await params;
+  const roomUrl = `${BASE_URL}/${roomName}`;
+
+  return {
+    title: `Room #${roomName}`,
+    description: `Join the conversation in room #${roomName} on Chat-Anywhere. Real-time chat, no signup needed, no data stored. Share images and links instantly.`,
+    openGraph: {
+      title: `Chat-Anywhere — Room #${roomName}`,
+      description: `Join the conversation in room #${roomName}. Real-time chat, no signup needed, no data stored.`,
+      url: roomUrl,
+    },
+    twitter: {
+      title: `Chat-Anywhere — Room #${roomName}`,
+      description: `Join the conversation in room #${roomName}. Real-time chat, no signup needed.`,
+    },
+    alternates: {
+      canonical: roomUrl,
+    },
+    robots: {
+      index: false, // Don't index individual room pages
+      follow: false,
+    },
+  };
+}
+
+export default async function RoomPage({
+  params,
+}: {
+  params: Promise<{ roomId: string }>;
 }) {
-  return (
-    <UserProvider roomId={params.roomId}>
-      <ChatInterface roomId={params.roomId} />
-    </UserProvider>
-  );
+  const { roomId } = await params;
+  return <RoomClient roomId={roomId} />;
 }

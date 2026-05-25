@@ -6,9 +6,9 @@ import type { Message } from "@/types";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
-  const { roomId } = params;
+  const { roomId } = await params;
   const { searchParams } = new URL(request.url);
   const since = searchParams.get("since");
   const limit = searchParams.get("limit");
@@ -30,9 +30,9 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
-  const { roomId } = params;
+  const { roomId } = await params;
   const userId = request.headers.get("x-user-id");
   if (!userId) {
     return NextResponse.json(

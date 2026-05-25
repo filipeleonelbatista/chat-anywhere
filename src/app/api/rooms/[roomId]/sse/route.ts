@@ -5,9 +5,9 @@ export const runtime = "edge";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { roomId: string } }
+  { params }: { params: Promise<{ roomId: string }> }
 ) {
-  const { roomId } = params;
+  const { roomId } = await params;
   const userId = request.nextUrl.searchParams.get("userId") || "anonymous";
   const clientId = `${roomId}-${userId}-${Date.now()}`;
 

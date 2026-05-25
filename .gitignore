@@ -4,3 +4,18 @@ node_modules/
 next-env.d.ts
 .env*.local
 
+# Brainstorming / design scratch files (not part of the app)
+/Project.md
+/agents.md
+/approaches.md
+/assumed-responses.md
+/clarifying-question-*.md
+/design-*.md
+/session-*.md
+/design-components.md
+/design-data-flow.md
+/design-error-handling.md
+/design-overview.md
+/design-summary.md
+/design-testing.md
+
