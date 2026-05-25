@@ -50,8 +50,8 @@ export async function POST(
     senderAvatar: body.senderAvatar,
     content: body.content,
     type: body.type || "text",
-    imageUrl: body.imageUrl,
-    linkPreview: body.linkPreview,
+    ...(body.imageUrl && { imageUrl: body.imageUrl }),
+    ...(body.linkPreview && { linkPreview: body.linkPreview }),
     timestamp: Date.now(),
     createdAt: new Date().toISOString(),
   };

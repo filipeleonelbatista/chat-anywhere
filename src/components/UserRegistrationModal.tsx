@@ -60,53 +60,44 @@ export function UserRegistrationModal({ roomId, onRegister }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 overflow-y-auto">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full my-8 mx-4">
+    <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-xl max-w-md w-full sm:mx-4 max-h-[90dvh] overflow-y-auto">
         {/* Welcome Section */}
-        <div className="p-6 pb-4 border-b border-gray-200 dark:border-gray-700">
-          <div className="text-center mb-4">
-            <div className="text-5xl mb-3">💬</div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Bem-vindo ao Chat-Anywhere! 🎉
+        <div className="p-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+          <div className="text-center mb-2">
+            <div className="text-3xl mb-1">💬</div>
+            <h1 className="text-lg font-bold text-gray-900 dark:text-white">
+              Bem-vindo ao Chat-Anywhere!
             </h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">
-              Chat em tempo real, direto do navegador. Sem cadastro, sem
-              complicação.
-            </p>
           </div>
 
-          <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-1">
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="flex items-start gap-3 p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+                className="flex items-center gap-1.5 p-1 rounded-lg bg-gray-50 dark:bg-gray-700/50"
               >
-                <span className="text-xl flex-shrink-0 mt-0.5">{f.icon}</span>
-                <div>
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                    {f.title}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {f.desc}
-                  </p>
-                </div>
+                <span className="text-base flex-shrink-0">{f.icon}</span>
+                <p className="text-[11px] font-medium text-gray-800 dark:text-gray-200 leading-tight">
+                  {f.title}
+                </p>
               </div>
             ))}
           </div>
         </div>
 
         {/* Registration Form */}
-        <div className="p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+        <div className="p-4">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
             Entrar na sala #{roomId}
           </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
             Preencha os dados abaixo para começar a conversar.
           </p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Escolha seu avatar
               </label>
               <AvatarSelector selected={avatar} onSelect={setAvatar} />
@@ -117,7 +108,7 @@ export function UserRegistrationModal({ roomId, onRegister }: Props) {
             <div>
               <label
                 htmlFor="name"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
                 Nome
               </label>
@@ -126,7 +117,7 @@ export function UserRegistrationModal({ roomId, onRegister }: Props) {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-whatsapp-green focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-whatsapp-green focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 placeholder="Seu nome"
                 maxLength={50}
               />
@@ -137,7 +128,7 @@ export function UserRegistrationModal({ roomId, onRegister }: Props) {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
                 Email
               </label>
@@ -146,7 +137,7 @@ export function UserRegistrationModal({ roomId, onRegister }: Props) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-whatsapp-green focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-whatsapp-green focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 placeholder="seu@email.com"
               />
               {errors.email && (
@@ -155,7 +146,7 @@ export function UserRegistrationModal({ roomId, onRegister }: Props) {
             </div>
             <button
               type="submit"
-              className="w-full py-3 bg-whatsapp-green hover:bg-whatsapp-green-dark text-white font-semibold rounded-lg transition-colors"
+              className="w-full py-2.5 text-sm bg-whatsapp-green hover:bg-whatsapp-green-dark text-white font-semibold rounded-lg transition-colors"
             >
               Entrar no Chat
             </button>

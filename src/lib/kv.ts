@@ -30,7 +30,14 @@ export async function saveMessage(
   const messageKey = `message:${message.id}`;
   await Promise.all([
     kv.zadd(messagesKey, { score: message.timestamp, member: message.id }),
-    kv.hset(messageKey, message as unknown as Record<string, unknown>),
+    kv.hset(
+      messageKey,
+      Object.fromEntries(
+        Object.entries(message as unknown as Record<string, unknown>).filter(
+          ([, v]) => v != null
+        )
+      )
+    ),
     kv.expire(messagesKey, MESSAGE_TTL),
     kv.expire(messageKey, MESSAGE_TTL),
   ]);

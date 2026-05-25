@@ -27,13 +27,29 @@ export function MessageInput({ onSend, onSendImage, disabled }: Props) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      handleSubmitAndReset();
     }
+  };
+
+  const adjustHeight = () => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 144)}px`;
   };
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setText(e.target.value);
     detectLinks(e.target.value);
+    requestAnimationFrame(adjustHeight);
+  };
+
+  const handleSubmitAndReset = (e?: React.FormEvent) => {
+    handleSubmit(e);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (el) el.style.height = "auto";
+    });
   };
 
   const handleImageSelected = async (file: File) => {
@@ -42,54 +58,58 @@ export function MessageInput({ onSend, onSendImage, disabled }: Props) {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="chat-input-bg px-4 py-2 flex items-end gap-2"
-    >
-      <button
-        type="button"
-        onClick={() => setShowImagePicker(!showImagePicker)}
-        className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-        aria-label="Attach image"
+    <div className="relative w-full flex justify-center">
+      <form
+        onSubmit={handleSubmitAndReset}
+        className="w-[95%]"
       >
-        <svg
-          className="w-6 h-6"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-          />
-        </svg>
-      </button>
-      <div className="flex-1 relative">
-        <textarea
-          ref={inputRef}
-          value={text}
-          onChange={handleTextChange}
-          onKeyDown={handleKeyDown}
-          placeholder="Type a message"
-          rows={1}
-          className="w-full resize-none rounded-lg px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-whatsapp-green focus:border-transparent"
-          disabled={disabled}
-        />
-        {links.length > 0 && <LinkPreview url={links[0].url} />}
-      </div>
-      {showImagePicker && <ImagePicker onSelect={handleImageSelected} />}
-      <button
-        type="submit"
-        disabled={!text.trim() || disabled}
-        className="p-2 text-whatsapp-green hover:text-whatsapp-green-dark disabled:text-gray-300 dark:disabled:text-gray-600 transition-colors"
-        aria-label="Send message"
-      >
-        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M1.101 21.757L23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z" />
-        </svg>
-      </button>
-    </form>
+        <div className="flex items-end gap-0 bg-white dark:bg-gray-800 rounded-[28px] px-1 py-0.5 shadow-lg mb-3 relative">
+          <button
+            type="button"
+            onClick={() => setShowImagePicker(!showImagePicker)}
+            className="w-12 h-12 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex-shrink-0 mb-[1.8px]"
+            aria-label="Attach image"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+          </button>
+          <div className="flex-1 relative min-w-0">
+            <textarea
+              ref={inputRef}
+              value={text}
+              onChange={handleTextChange}
+              onKeyDown={handleKeyDown}
+              placeholder="Digite uma mensagem"
+              rows={1}
+              className="w-full resize-none px-3 py-3 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none overflow-y-auto text-sm leading-5"
+              disabled={disabled}
+            />
+            {links.length > 0 && <LinkPreview url={links[0].url} />}
+          </div>
+          <button
+            type="submit"
+            disabled={!text.trim() || disabled}
+            className="w-12 h-12 flex items-center justify-center bg-whatsapp-green hover:bg-whatsapp-green-dark disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-full transition-colors flex-shrink-0 mb-[1.8px]"
+            aria-label="Send message"
+          >
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M1.101 21.757L23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z" />
+            </svg>
+          </button>
+          {showImagePicker && <ImagePicker onSelect={handleImageSelected} />}
+        </div>
+      </form>
+    </div>
   );
 }

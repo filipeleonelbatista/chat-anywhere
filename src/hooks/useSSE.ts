@@ -5,10 +5,12 @@ import type { Message, ConnectionStatus } from "@/types";
 interface UseSSEOptions {
   roomId: string;
   userId: string;
+  userName: string;
+  userAvatar: string;
   onMessage: (message: Message) => void;
 }
 
-export function useSSE({ roomId, userId, onMessage }: UseSSEOptions) {
+export function useSSE({ roomId, userId, userName, userAvatar, onMessage }: UseSSEOptions) {
   const [status, setStatus] = useState<ConnectionStatus>({
     type: "disconnected",
   });
@@ -16,13 +18,12 @@ export function useSSE({ roomId, userId, onMessage }: UseSSEOptions) {
   const retryCountRef = useRef(0);
   const maxRetries = 10;
 
-  // Named function expression allows safe recursive setTimeout reference
   const connect = useCallback(function connectFn() {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
     }
 
-    const url = `/api/rooms/${roomId}/sse?userId=${userId}`;
+    const url = `/api/rooms/${roomId}/sse?userId=${userId}&userName=${encodeURIComponent(userName)}&userAvatar=${encodeURIComponent(userAvatar)}`;
     const es = new EventSource(url);
     eventSourceRef.current = es;
     retryCountRef.current = 0;
@@ -58,7 +59,7 @@ export function useSSE({ roomId, userId, onMessage }: UseSSEOptions) {
         setStatus({ type: "disconnected", message: "Connection lost" });
       }
     };
-  }, [roomId, userId, onMessage]);
+  }, [roomId, userId, userName, userAvatar, onMessage]);
 
   useEffect(() => {
     connect();

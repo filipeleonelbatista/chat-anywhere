@@ -5,7 +5,7 @@ import { ChatInterface } from "@/components/ChatInterface";
 
 export default function RoomClient({ roomId }: { roomId: string }) {
   return (
-    <UserProvider roomId={roomId}>
+    <UserProvider>
       <ChatInterface roomId={roomId} />
     </UserProvider>
   );

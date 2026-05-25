@@ -13,13 +13,13 @@ interface Props {
 
 export function AvatarSelector({ selected, onSelect }: Props) {
   return (
-    <div className="flex flex-wrap gap-2 justify-center">
+    <div className="flex flex-wrap gap-1 sm:gap-2 justify-center">
       {AVATARS.map((avatar) => (
         <button
           key={avatar}
           type="button"
           onClick={() => onSelect(avatar)}
-          className={`text-3xl w-12 h-12 rounded-full transition-all ${
+          className={`text-2xl sm:text-3xl w-10 h-10 sm:w-12 sm:h-12 rounded-full transition-all ${
             selected === avatar
               ? "ring-2 ring-whatsapp-green scale-110 bg-gray-100 dark:bg-gray-600"
               : "hover:bg-gray-100 dark:hover:bg-gray-600"

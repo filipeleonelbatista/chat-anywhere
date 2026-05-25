@@ -10,7 +10,12 @@ interface Props {
 
 export function MessageBubble({ message, isOwn }: Props) {
   return (
-    <div className={`flex ${isOwn ? "justify-end" : "justify-start"} mb-2`}>
+    <div className={`flex ${isOwn ? "justify-end" : "justify-start"} mb-2 items-end gap-2`}>
+      {!isOwn && (
+        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-lg flex-shrink-0">
+          {message.senderAvatar}
+        </div>
+      )}
       <div
         className={`max-w-[80%] rounded-lg px-3 py-2 shadow-sm ${
           isOwn

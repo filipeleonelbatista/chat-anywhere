@@ -6,33 +6,27 @@ import { v4 as uuidv4 } from "uuid";
 
 interface UserContextType {
   user: User | null;
-  register: (
-    name: string,
-    email: string,
-    avatar: string,
-    roomId: string
-  ) => void;
-  clearUser: (roomId: string) => void;
+  register: (name: string, email: string, avatar: string) => void;
+  clearUser: () => void;
   isRegistered: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
+const STORAGE_KEY = "chat-anywhere:user";
+
 export function UserProvider({
   children,
-  roomId,
 }: {
   children: React.ReactNode;
-  roomId: string;
 }) {
-  const storageKey = `chat-anywhere:${roomId}:user`;
   const [user, setUser, removeUser] = useLocalStorage<User | null>(
-    storageKey,
+    STORAGE_KEY,
     null
   );
 
   const register = useCallback(
-    (name: string, email: string, avatar: string, rid: string) => {
+    (name: string, email: string, avatar: string) => {
       const newUser: User = {
         id: uuidv4(),
         name,
@@ -40,21 +34,16 @@ export function UserProvider({
         avatar,
         joinedAt: Date.now(),
       };
-      const key = `chat-anywhere:${rid}:user`;
-      localStorage.setItem(key, JSON.stringify(newUser));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
       setUser(newUser);
     },
     [setUser]
   );
 
-  const clearUser = useCallback(
-    (rid: string) => {
-      const key = `chat-anywhere:${rid}:user`;
-      localStorage.removeItem(key);
-      removeUser();
-    },
-    [removeUser]
-  );
+  const clearUser = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    removeUser();
+  }, [removeUser]);
 
   return (
     <UserContext.Provider

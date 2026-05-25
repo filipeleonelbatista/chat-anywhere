@@ -1,6 +1,9 @@
 export interface SSEClient {
   id: string;
   roomId: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
   controller: ReadableStreamDefaultController;
   encoder: TextEncoder;
 }
@@ -43,7 +46,10 @@ export function getRoomClientCount(roomId: string): number {
 
 export function createSSEStream(
   roomId: string,
-  clientId: string
+  clientId: string,
+  userId: string,
+  userName: string,
+  userAvatar: string
 ): ReadableStream {
   return new ReadableStream({
     start(controller) {
@@ -51,6 +57,9 @@ export function createSSEStream(
       const client: SSEClient = {
         id: clientId,
         roomId,
+        userId,
+        userName,
+        userAvatar,
         controller,
         encoder,
       };
@@ -66,4 +75,18 @@ export function createSSEStream(
       removeClient(clientId);
     },
   });
+}
+
+export function getRoomUsers(roomId: string) {
+  const users: Array<{ id: string; name: string; avatar: string }> = [];
+  clients.forEach((client) => {
+    if (client.roomId === roomId) {
+      users.push({
+        id: client.userId,
+        name: client.userName,
+        avatar: client.userAvatar,
+      });
+    }
+  });
+  return users;
 }

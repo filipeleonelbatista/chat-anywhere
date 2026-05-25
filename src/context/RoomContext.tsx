@@ -5,6 +5,7 @@ import React, {
   useState,
   useCallback,
   useRef,
+  useEffect,
 } from "react";
 import { useSSE } from "@/hooks/useSSE";
 import type { Message, ConnectionStatus } from "@/types";
@@ -48,7 +49,7 @@ export function RoomProvider({
     });
   }, []);
 
-  const { status } = useSSE({ roomId, userId, onMessage: handleNewMessage });
+  const { status } = useSSE({ roomId, userId, userName, userAvatar, onMessage: handleNewMessage });
 
   const sendMessage = useCallback(
     async (
@@ -116,6 +117,12 @@ export function RoomProvider({
       setLoadingOlder(false);
     }
   }, [roomId, userId, loadingOlder, hasMoreMessages]);
+
+  const loadOlderRef = useRef(loadOlderMessages);
+  loadOlderRef.current = loadOlderMessages;
+  useEffect(() => {
+    loadOlderRef.current();
+  }, []);
 
   return (
     <RoomContext.Provider

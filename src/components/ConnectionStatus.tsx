@@ -13,14 +13,14 @@ export function ConnectionStatus({ status }: Props) {
     disconnected: "bg-red-500",
   };
   const labels = {
-    connected: "Connected",
-    reconnecting: "Reconnecting...",
-    disconnected: "Disconnected",
+    connected: "Conectado",
+    reconnecting: "Reconectando...",
+    disconnected: "Desconectado",
   };
   return (
-    <div className="flex items-center gap-1.5">
-      <span className={`w-2 h-2 rounded-full ${colors[status.type]}`} />
-      <span className="text-xs opacity-80">{labels[status.type]}</span>
-    </div>
+    <span
+      className={`w-2 h-2 rounded-full ${colors[status.type]}`}
+      title={labels[status.type]}
+    />
   );
 }
