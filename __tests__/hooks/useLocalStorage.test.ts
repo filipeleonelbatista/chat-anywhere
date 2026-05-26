@@ -1,4 +1,4 @@
-import { renderHook, act } from "@testing-library/react";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 describe("useLocalStorage", () => {
@@ -6,10 +6,13 @@ describe("useLocalStorage", () => {
     localStorage.clear();
   });
 
-  it("returns initial value when no stored value exists", () => {
+  it("returns initial value when no stored value exists, then hydrates", async () => {
     const { result } = renderHook(() =>
       useLocalStorage("test", "default")
     );
+    await waitFor(() => {
+      expect(result.current[3]).toBe(true);
+    });
     expect(result.current[0]).toBe("default");
   });
 
@@ -38,11 +41,14 @@ describe("useLocalStorage", () => {
     expect(localStorage.getItem("test")).toBeNull();
   });
 
-  it("reads existing value from localStorage", () => {
+  it("reads existing value from localStorage after hydrate", async () => {
     localStorage.setItem("existing", JSON.stringify({ name: "Alice" }));
     const { result } = renderHook(() =>
       useLocalStorage("existing", { name: "" })
     );
-    expect(result.current[0]).toEqual({ name: "Alice" });
+    await waitFor(() => {
+      expect(result.current[3]).toBe(true);
+      expect(result.current[0]).toEqual({ name: "Alice" });
+    });
   });
 });

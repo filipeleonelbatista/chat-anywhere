@@ -1,4 +1,7 @@
-export type MessageType = "text" | "image" | "link";
+export type MessageType = "text" | "image" | "link" | "system";
+
+/** When `type` is `system`, indicates join/leave for the room. */
+export type PresenceKind = "join" | "leave";
 
 export type MessageStatus = "pending" | "sent" | "delivered";
 
@@ -34,6 +37,8 @@ export interface Message {
   senderAvatar: string;
   content: string;
   type: MessageType;
+  /** Set when `type` is `system` (join/leave balloons). */
+  presence?: PresenceKind;
   imageUrl?: string;
   linkPreview?: LinkPreview;
   status: MessageStatus;

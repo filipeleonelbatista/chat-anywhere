@@ -1,6 +1,8 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
-import type { Message, Reaction } from "@/types";
+import React, { useState, useRef, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
+import { Clock, Check, CheckCircle2, ChevronDown, X } from "lucide-react";
+import type { Message, Reaction, ReplyTo } from "@/types";
 import { REACTION_EMOJIS } from "@/types";
 import { formatTimestamp } from "@/utils/formatting";
 import { useRoom } from "@/context/RoomContext";
@@ -8,28 +10,15 @@ import { useRoom } from "@/context/RoomContext";
 const URL_REGEX = /(https?:\/\/[^\s<]+[^\s<.,;:!?)\]}>])/g;
 
 function ClockIcon() {
-  return (
-    <svg className="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm1-13h-2v6l5 3 .5-1-3.5-2V7z"/>
-    </svg>
-  );
+  return <Clock className="w-3.5 h-3.5 text-gray-400" />;
 }
 
 function SingleCheckIcon() {
-  return (
-    <svg className="w-3.5 h-3.5 text-gray-400" viewBox="0 0 16 11" fill="currentColor">
-      <path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.011-2.095a.463.463 0 0 0-.336-.153.457.457 0 0 0-.334.165.537.537 0 0 0-.128.361.49.49 0 0 0 .153.349l2.455 2.557c.19.2.495.19.684-.013l6.632-8.182a.495.495 0 0 0 .114-.336.462.462 0 0 0-.154-.365z"/>
-    </svg>
-  );
+  return <Check className="w-3.5 h-3.5 text-gray-400" />;
 }
 
 function DoubleCheckIcon() {
-  return (
-    <svg className="w-3.5 h-3.5 text-blue-500" viewBox="0 0 16 11" fill="currentColor">
-      <path d="M11.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-2.011-2.095a.463.463 0 0 0-.336-.153.457.457 0 0 0-.334.165.537.537 0 0 0-.128.361.49.49 0 0 0 .153.349l2.455 2.557c.19.2.495.19.684-.013l6.632-8.182a.495.495 0 0 0 .114-.336.462.462 0 0 0-.154-.365z"/>
-      <path d="M15.071.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-6.19 7.636-.735-.766a.49.49 0 0 0-.348-.155l.528.55c.19.2.495.19.684-.013l6.632-8.182a.495.495 0 0 0 .114-.336.462.462 0 0 0-.154-.365zM7.471 5.653a.457.457 0 0 0-.304-.102.493.493 0 0 0-.381.178l-3.19 3.936-1.011-1.055a.463.463 0 0 0-.336-.153.457.457 0 0 0-.334.165.537.537 0 0 0-.128.361.49.49 0 0 0 .153.349l1.455 1.557c.19.2.495.19.684-.013l3.632-4.182a.495.495 0 0 0 .114-.336.462.462 0 0 0-.154-.365z"/>
-    </svg>
-  );
+  return <CheckCircle2 className="w-3.5 h-3.5 text-blue-500" />;
 }
 
 function linkify(text: string): React.ReactNode {
@@ -61,17 +50,40 @@ function linkify(text: string): React.ReactNode {
 }
 
 function aggregateReactions(reactions: Reaction[]) {
-  const map = new Map<string, { emoji: string; count: number; users: string[] }>();
+  const map = new Map<
+    string,
+    {
+      emoji: string;
+      entries: { userId: string; userName: string }[];
+    }
+  >();
   for (const r of reactions) {
     const existing = map.get(r.emoji);
+    const row = {
+      userId: r.userId,
+      userName: (r.userName && r.userName.trim()) || "—",
+    };
     if (existing) {
-      existing.count++;
-      existing.users.push(r.userName);
+      existing.entries.push(row);
     } else {
-      map.set(r.emoji, { emoji: r.emoji, count: 1, users: [r.userName] });
+      map.set(r.emoji, { emoji: r.emoji, entries: [row] });
     }
   }
-  return Array.from(map.values());
+  const order = new Map<string, number>(
+    REACTION_EMOJIS.map((e, i) => [e, i]) as [string, number][]
+  );
+  return Array.from(map.values())
+    .map((g) => ({
+      emoji: g.emoji,
+      count: g.entries.length,
+      entries: g.entries,
+    }))
+    .sort((a, b) => {
+      const ia = order.has(a.emoji) ? order.get(a.emoji)! : 99;
+      const ib = order.has(b.emoji) ? order.get(b.emoji)! : 99;
+      if (ia !== ib) return ia - ib;
+      return a.emoji.localeCompare(b.emoji);
+    });
 }
 
 interface Props {
@@ -84,8 +96,18 @@ interface Props {
 export function MessageBubble({ message, isOwn, onReply, scrollToMessage }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const [reactionModalOpen, setReactionModalOpen] = useState(false);
   const { reactToMessage, deleteMessage } = useRoom();
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const reactionGroups = useMemo(
+    () =>
+      message.reactions?.length
+        ? aggregateReactions(message.reactions)
+        : [],
+    [message.reactions]
+  );
+  const reactionTotal = message.reactions?.length ?? 0;
 
   const positioningRef = useRef(true);
 
@@ -101,6 +123,23 @@ export function MessageBubble({ message, isOwn, onReply, scrollToMessage }: Prop
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (menuOpen) setReactionModalOpen(false);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!reactionModalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setReactionModalOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "unset";
+    };
+  }, [reactionModalOpen]);
 
   // Adjust dropdown position to stay within viewport
   useEffect(() => {
@@ -128,20 +167,44 @@ export function MessageBubble({ message, isOwn, onReply, scrollToMessage }: Prop
     }
   }, [menuOpen]);
 
+  if (message.type === "system" && message.presence) {
+    const line =
+      message.presence === "join"
+        ? `${message.senderName} entrou na conversa`
+        : `${message.senderName} saiu da conversa`;
+    return (
+      <div className="flex justify-center py-1">
+        <div
+          className="max-w-[min(90%,32rem)] rounded-lg border border-gray-200/90 bg-white px-3 py-2 text-center text-xs leading-snug text-gray-600 shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
+          role="status"
+        >
+          {line}
+        </div>
+      </div>
+    );
+  }
+
+  const hasReactions =
+    !message.deleted &&
+    Boolean(message.reactions?.length);
+
   return (
-    <div className={`flex ${isOwn ? "justify-end" : "justify-start"} mb-2 items-end gap-2`}>
+    <>
+    <div
+      className={`flex ${isOwn ? "justify-end" : "justify-start"} items-end gap-2 ${hasReactions ? "mb-9" : "mb-2"}`}
+    >
       {!isOwn && (
         <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center text-lg flex-shrink-0">
           {message.senderAvatar}
         </div>
       )}
-      <div
-        className={`max-w-[80%] relative group rounded-lg px-3 py-2 shadow-sm ${
-          isOwn
-            ? "bg-whatsapp-bubble dark:bg-[#005C4B] rounded-br-sm"
-            : "bg-white dark:bg-gray-700 rounded-bl-sm"
-        }`}
-      >
+       <div
+         className={`max-w-[80%] min-w-[230px] relative overflow-visible rounded-lg px-3 py-2 shadow-sm ${
+           isOwn
+             ? "bg-whatsapp-bubble dark:bg-[#005C4B] rounded-br-sm"
+             : "bg-white dark:bg-gray-700 rounded-bl-sm"
+         }`}
+       >
         {!isOwn && (
           <p className="text-xs font-semibold text-whatsapp-green-dark dark:text-whatsapp-green mb-1">
             {message.senderName}
@@ -181,10 +244,11 @@ export function MessageBubble({ message, isOwn, onReply, scrollToMessage }: Prop
         <div className="absolute top-1 right-1">
           <button
             onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
-            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-xs opacity-0 group-hover:opacity-100"
+            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
             aria-label="Menu"
+            aria-expanded={menuOpen}
           >
-            ▼
+            <ChevronDown className="w-4 h-4" strokeWidth={2.5} />
           </button>
 
           {menuOpen && (
@@ -287,30 +351,121 @@ export function MessageBubble({ message, isOwn, onReply, scrollToMessage }: Prop
             </p>
           </>
         )}
-        {!message.deleted && message.reactions && message.reactions.length > 0 && (
-          <div className={`flex flex-wrap gap-1 mb-1 ${isOwn ? "justify-start" : "justify-end"}`}>
-            {aggregateReactions(message.reactions).map(({ emoji, count, users }) => (
-              <span
-                key={emoji}
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-gray-700 rounded-full border dark:border-gray-600 text-xs shadow-sm cursor-default"
-                title={users.join(", ")}
-              >
-                <span>{emoji}</span>
-                <span className="text-gray-500 dark:text-gray-400">{count}</span>
-              </span>
-            ))}
-          </div>
-        )}
 
-        <div className="flex justify-end items-center gap-1 mt-1">
-          <span className="text-[10px] text-gray-400">
-            {formatTimestamp(message.timestamp)}
-          </span>
-          {isOwn && message.status === "pending" && <ClockIcon />}
-          {isOwn && message.status === "sent" && <SingleCheckIcon />}
-          {isOwn && message.status === "delivered" && <DoubleCheckIcon />}
+        <div className="relative mt-1">
+          <div className="flex w-full justify-end items-center gap-1">
+            <span className="text-[10px] text-gray-400">
+              {formatTimestamp(message.timestamp)}
+            </span>
+            {isOwn && message.status === "pending" && <ClockIcon />}
+            {isOwn && message.status === "sent" && <SingleCheckIcon />}
+            {isOwn && message.status === "delivered" && <DoubleCheckIcon />}
+          </div>
+          {hasReactions && reactionGroups.length > 0 && (
+            <div
+              className={`pointer-events-none absolute top-full z-10 translate-y-0.5 ${
+                isOwn ? "right-[-2]" : "right-[-2]"
+              }`}
+            >
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMenuOpen(false);
+                  setEmojiPickerOpen(false);
+                  setReactionModalOpen(true);
+                }}
+                className="pointer-events-auto inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white py-0.5 pl-0.5 pr-2 shadow-lg transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:hover:bg-gray-600"
+                aria-haspopup="dialog"
+                aria-expanded={reactionModalOpen}
+                aria-label={`Reações: ${reactionTotal} no total`}
+              >
+                <span className="flex items-center pl-0.5">
+                  {reactionGroups.map((g, idx) => (
+                    <span
+                      key={g.emoji}
+                      className={`mt-0.5 relative shrink-0 select-none bg-transparent text-[17px] leading-none ${
+                        idx > 0 ? "-ml-1.5" : ""
+                      }`}
+                      style={{ zIndex: reactionGroups.length - idx }}
+                      aria-hidden
+                    >
+                      {g.emoji}
+                    </span>
+                  ))}
+                </span>
+                <span className="text-xs font-semibold tabular-nums text-gray-600 dark:text-gray-300">
+                  {reactionTotal}
+                </span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
+
+    {reactionModalOpen &&
+      typeof document !== "undefined" &&
+      createPortal(
+        <div
+          className="fixed inset-0 z-[220] flex items-center justify-center bg-black/50 p-4"
+          role="presentation"
+          onClick={() => setReactionModalOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reaction-modal-title"
+            className="max-h-[80dvh] w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-800"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+              <h2
+                id="reaction-modal-title"
+                className="text-lg font-semibold text-gray-900 dark:text-white"
+              >
+                Reações
+              </h2>
+              <button
+                type="button"
+                onClick={() => setReactionModalOpen(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label="Fechar"
+              >
+                <X className="h-5 w-5" strokeWidth={2.5} />
+              </button>
+            </div>
+            <div className="max-h-[calc(80dvh-5rem)] overflow-y-auto px-4 py-3">
+              {reactionGroups.map((group) => (
+                <section key={group.emoji} className="mb-5 last:mb-0">
+                  <h3 className="mb-2 flex items-center gap-2 border-b border-gray-100 pb-2 text-sm font-semibold text-gray-800 dark:border-gray-700 dark:text-gray-100">
+                    <span className="text-xl leading-none" aria-hidden>
+                      {group.emoji}
+                    </span>
+                    <span className="font-normal text-gray-500 dark:text-gray-400">
+                      ({group.count})
+                    </span>
+                  </h3>
+                  <ul className="space-y-2">
+                    {group.entries.map((row) => (
+                      <li
+                        key={`${group.emoji}-${row.userId}`}
+                        className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+                      >
+                        <span className="text-base leading-none" aria-hidden>
+                          {group.emoji}
+                        </span>
+                        <span className="min-w-0 truncate">{row.userName}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
   );
 }

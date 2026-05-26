@@ -57,7 +57,7 @@ As mensagens expiram automaticamente após **24 horas**. Seus dados (nome, email
 
 | Tecnologia | Versão | Finalidade |
 |---|---|---|
-| [Next.js](https://nextjs.org/) | 16 | Framework full-stack com App Router |
+| [Next.js](https://nextjs.org/) | 15 | Framework full-stack com App Router |
 | [React](https://react.dev/) | 19 | Biblioteca de UI |
 | [TypeScript](https://www.typescriptlang.org/) | 5+ | Tipagem estática |
 | [Tailwind CSS](https://tailwindcss.com/) | 3.4 | Estilização utilitária |
@@ -100,8 +100,21 @@ KV_REST_API_TOKEN=...
 # Vercel Blob
 BLOB_READ_WRITE_TOKEN=...
 
+# Cron: limpeza de imagens antigas no Blob (`/api/cron/clean-blobs`)
+CRON_SECRET=...
+
 # Base URL (opcional, para OG images)
 NEXT_PUBLIC_BASE_URL=http://localhost:3000
+```
+
+O histórico de cada sala é uma **janela móvel de 24 horas** por `timestamp` da mensagem (alinhada ao TTL do KV): qualquer pessoa que abrir a mesma sala vê o mesmo recorte das últimas 24h; ao rolar para cima, carrega-se o restante ainda dentro dessa janela.
+
+**Presença (balões “entrou / saiu”):** a contagem de abas por usuário usa **Redis** (`SADD`/`SREM` em `room:{roomId}:presence:user:{userId}` com TTL), para que várias instâncias serverless não dupliquem join/leave. O mapa de conexões SSE em memória continua só na instância atual — por exemplo, o modal “Pessoas” (`getRoomUsers`) ainda lista apenas quem está conectado à **mesma** instância; alinhar isso ao Redis pode ser um passo futuro.
+
+O `vercel.json` agenda um cron **a cada hora** em `/api/cron/clean-blobs`, que remove blobs com prefixo `chat-images/` e idade superior a 24 horas. Na Vercel, defina `CRON_SECRET` no projeto; o cron envia `Authorization: Bearer <CRON_SECRET>` automaticamente. Para testar localmente:
+
+```bash
+curl -s -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/clean-blobs
 ```
 
 ### Executar

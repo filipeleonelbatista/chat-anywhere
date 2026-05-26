@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateMessage, getRecentMessages } from "@/lib/kv";
+import { updateMessage, getMessageForRoom } from "@/lib/kv";
 import { broadcastToRoom } from "@/lib/sse";
 import type { SSEAction } from "@/types";
 
@@ -16,8 +16,7 @@ export async function POST(
     }
 
     // Verify sender
-    const messages = await getRecentMessages(roomId, 100);
-    const message = messages.find((m) => m.id === messageId);
+    const message = await getMessageForRoom(roomId, messageId);
     if (!message) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }

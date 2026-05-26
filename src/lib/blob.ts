@@ -8,6 +8,9 @@ const ALLOWED_TYPES = [
 ];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
+/** Blob pathname prefix for chat uploads (used by cron cleanup). */
+export const CHAT_IMAGE_BLOB_PREFIX = "chat-images/";
+
 export interface UploadResult {
   url: string;
   contentType: string;
@@ -25,7 +28,7 @@ export async function uploadImage(file: File): Promise<UploadResult> {
       `File too large: ${(file.size / 1024 / 1024).toFixed(1)}MB. Max: 5MB`
     );
   }
-  const filename = `chat-images/${Date.now()}-${file.name.replace(
+  const filename = `${CHAT_IMAGE_BLOB_PREFIX}${Date.now()}-${file.name.replace(
     /[^a-zA-Z0-9.-]/g,
     "_"
   )}`;

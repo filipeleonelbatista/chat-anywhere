@@ -1,5 +1,6 @@
 "use client";
-import React from "react";
+import React, { useEffect, useCallback } from "react";
+import { ThumbsUp, X } from "lucide-react";
 
 interface Props {
   isOpen: boolean;
@@ -34,11 +35,34 @@ const FAQ = [
 ];
 
 export function HelpModal({ isOpen, onClose }: Props) {
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      onClose();
+    }
+  }, [onClose]);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+      window.addEventListener("keydown", handleKeyDown);
+    } else {
+      document.body.style.overflow = "unset";
+    }
+
+    return () => {
+      document.body.style.overflow = "unset";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, handleKeyDown]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 overflow-y-auto">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-lg w-full my-8 mx-4 p-6">
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-start justify-center z-50 overflow-y-auto p-4"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-lg w-full my-8 p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -57,7 +81,7 @@ export function HelpModal({ isOpen, onClose }: Props) {
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
             aria-label="Fechar"
           >
-            ✕
+            <X className="w-4 h-4" strokeWidth={2.5} />
           </button>
         </div>
 
@@ -109,9 +133,10 @@ export function HelpModal({ isOpen, onClose }: Props) {
         {/* Close button */}
         <button
           onClick={onClose}
-          className="w-full py-3 bg-whatsapp-green hover:bg-whatsapp-green-dark text-white font-semibold rounded-lg transition-colors"
+          className="w-full py-3 bg-whatsapp-green hover:bg-whatsapp-green-dark text-white font-semibold rounded-lg transition-colors inline-flex items-center justify-center gap-2"
         >
-          Entendi! 👍
+          <span>Entendi!</span>
+          <ThumbsUp className="w-5 h-5 shrink-0" strokeWidth={2} />
         </button>
       </div>
     </div>

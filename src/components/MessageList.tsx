@@ -2,10 +2,12 @@
 import React, { useRef, useEffect, useCallback } from "react";
 import { MessageBubble } from "./MessageBubble";
 import { NewMessageIndicator } from "./NewMessageIndicator";
+import { EmptyRoomHints } from "./EmptyRoomHints";
 import type { Message } from "@/types";
 
 interface Props {
   messages: Message[];
+  roomId: string;
   userId: string;
   onLoadOlder: () => void;
   hasMore: boolean;
@@ -15,6 +17,7 @@ interface Props {
 
 export function MessageList({
   messages,
+  roomId,
   userId,
   onLoadOlder,
   hasMore,
@@ -71,30 +74,46 @@ export function MessageList({
     }
   }, []);
 
+  const showEmptyHints =
+    messages.length === 0 && !loadingOlder && roomId.length > 0;
+
   return (
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className="flex-1 overflow-y-auto px-4 py-2 space-y-1"
+      className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-2"
     >
       {loadingOlder && (
-        <div className="text-center py-2">
+        <div className="py-2 text-center">
           <span className="text-sm text-gray-400">
             Loading older messages...
           </span>
         </div>
       )}
-      {messages.map((msg) => (
-        <div key={msg.id} id={`msg-${msg.id}`}>
-          <MessageBubble
-            message={msg}
-            isOwn={msg.senderId === userId}
-            onReply={onReply}
-            scrollToMessage={scrollToMessage}
-          />
-        </div>
-      ))}
-      <div ref={bottomRef} />
+      {showEmptyHints ? (
+        <>
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 py-8 min-h-[min(28rem,65vh)]">
+            <EmptyRoomHints roomId={roomId} />
+          </div>
+          <div ref={bottomRef} className="h-0 shrink-0" />
+        </>
+      ) : (
+        <>
+          <div className="flex flex-1 flex-col space-y-1">
+            {messages.map((msg) => (
+              <div key={msg.id} id={`msg-${msg.id}`}>
+                <MessageBubble
+                  message={msg}
+                  isOwn={msg.senderId === userId}
+                  onReply={onReply}
+                  scrollToMessage={scrollToMessage}
+                />
+              </div>
+            ))}
+          </div>
+          <div ref={bottomRef} />
+        </>
+      )}
       <NewMessageIndicator count={newCount} onClick={scrollToBottom} />
     </div>
   );

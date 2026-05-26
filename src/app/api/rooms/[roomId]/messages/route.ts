@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { saveMessage, getMessages, getRecentMessages } from "@/lib/kv";
+import {
+  saveMessage,
+  getLatestMessagesInWindow,
+  getOlderMessagesInWindow,
+} from "@/lib/kv";
 import { v4 as uuidv4 } from "uuid";
 import { broadcastToRoom, getRoomUsers } from "@/lib/sse";
 import type { Message, MessageStatus, MessageType } from "@/types";
+import {
+  ROOM_HISTORY_INITIAL_LIMIT,
+  ROOM_HISTORY_PAGE,
+} from "@/lib/room-history";
 
 export async function GET(
   request: NextRequest,
@@ -10,21 +18,39 @@ export async function GET(
 ) {
   const { roomId } = await params;
   const { searchParams } = new URL(request.url);
-  const since = searchParams.get("since");
-  const limit = searchParams.get("limit");
+  const beforeRaw = searchParams.get("before");
+  const limitRaw = searchParams.get("limit");
 
-  if (since) {
-    const messages = await getMessages(roomId, {
-      since: parseInt(since),
-      limit: limit ? parseInt(limit) : 20,
-    });
+  if (beforeRaw != null && beforeRaw !== "") {
+    const before = parseInt(beforeRaw, 10);
+    if (Number.isNaN(before)) {
+      return NextResponse.json({ error: "Invalid before" }, { status: 400 });
+    }
+    const pageLimit = Math.min(
+      100,
+      Math.max(
+        1,
+        parseInt(limitRaw ?? String(ROOM_HISTORY_PAGE), 10) || ROOM_HISTORY_PAGE
+      )
+    );
+    const messages = await getOlderMessagesInWindow(
+      roomId,
+      before,
+      pageLimit,
+      Date.now()
+    );
     return NextResponse.json(messages);
   }
 
-  const messages = await getRecentMessages(
-    roomId,
-    limit ? parseInt(limit) : 50
+  const limit = Math.min(
+    100,
+    Math.max(
+      1,
+      parseInt(limitRaw ?? String(ROOM_HISTORY_INITIAL_LIMIT), 10) ||
+        ROOM_HISTORY_INITIAL_LIMIT
+    )
   );
+  const messages = await getLatestMessagesInWindow(roomId, limit, Date.now());
   return NextResponse.json(messages);
 }
 
@@ -42,6 +68,12 @@ export async function POST(
   }
 
   const { content, type, senderId, senderName, senderAvatar, imageUrl, linkPreview, tempId, replyTo } = await request.json();
+  if (type === "system") {
+    return NextResponse.json(
+      { error: "System messages cannot be created via this endpoint" },
+      { status: 400 }
+    );
+  }
   const roomUsers = getRoomUsers(roomId);
   const otherUsers = roomUsers.filter((u) => u.id !== userId);
   const status: MessageStatus = otherUsers.length > 0 ? "delivered" : "sent";

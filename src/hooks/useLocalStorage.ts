@@ -4,8 +4,9 @@ import { useState, useCallback, useEffect } from "react";
 export function useLocalStorage<T>(
   key: string,
   initialValue: T
-): [T, (value: T | ((prev: T) => T)) => void, () => void] {
+): [T, (value: T | ((prev: T) => T)) => void, () => void, boolean] {
   const [storedValue, setStoredValue] = useState<T>(initialValue);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
     try {
@@ -15,6 +16,8 @@ export function useLocalStorage<T>(
       }
     } catch {
       // ignore
+    } finally {
+      setIsHydrated(true);
     }
   }, [key]);
 
@@ -42,5 +45,5 @@ export function useLocalStorage<T>(
     }
   }, [key, initialValue]);
 
-  return [storedValue, setValue, removeValue];
+  return [storedValue, setValue, removeValue, isHydrated];
 }

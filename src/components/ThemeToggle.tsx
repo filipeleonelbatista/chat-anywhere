@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { Moon, Sun } from "lucide-react";
 
 export function ThemeToggle() {
   const [dark, setDark] = useState(false);
@@ -22,7 +23,11 @@ export function ThemeToggle() {
       aria-label={dark ? "Modo claro" : "Modo escuro"}
       title={dark ? "Modo claro" : "Modo escuro"}
     >
-      {dark ? "☀️" : "🌙"}
+      {dark ? (
+        <Sun className="w-[18px] h-[18px]" strokeWidth={2} />
+      ) : (
+        <Moon className="w-[18px] h-[18px]" strokeWidth={2} />
+      )}
     </button>
   );
 }

@@ -3,12 +3,17 @@ import React, { createContext, useContext, useCallback } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { User } from "@/types";
 import { v4 as uuidv4 } from "uuid";
+import { sanitizeName } from "@/utils/sanitize";
 
 interface UserContextType {
   user: User | null;
   register: (name: string, email: string, avatar: string) => void;
+  /** Updates display name and avatar; keeps the same user id and email. */
+  updateProfile: (name: string, avatar: string) => void;
   clearUser: () => void;
   isRegistered: boolean;
+  /** True after localStorage has been read on the client (avoids registration flash). */
+  isAuthReady: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -20,7 +25,7 @@ export function UserProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const [user, setUser, removeUser] = useLocalStorage<User | null>(
+  const [user, setUser, removeUser, isAuthReady] = useLocalStorage<User | null>(
     STORAGE_KEY,
     null
   );
@@ -40,6 +45,20 @@ export function UserProvider({
     [setUser]
   );
 
+  const updateProfile = useCallback(
+    (name: string, avatar: string) => {
+      setUser((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          name: sanitizeName(name),
+          avatar,
+        };
+      });
+    },
+    [setUser]
+  );
+
   const clearUser = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY);
     removeUser();
@@ -47,7 +66,14 @@ export function UserProvider({
 
   return (
     <UserContext.Provider
-      value={{ user, register, clearUser, isRegistered: user !== null }}
+      value={{
+        user,
+        register,
+        updateProfile,
+        clearUser,
+        isRegistered: user !== null,
+        isAuthReady,
+      }}
     >
       {children}
     </UserContext.Provider>

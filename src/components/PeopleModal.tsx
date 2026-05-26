@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { X } from "lucide-react";
 
 interface ConnectedUser {
   id: string;
@@ -41,7 +42,7 @@ export function PeopleModal({ roomId, isOpen, onClose }: Props) {
             className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
             aria-label="Fechar"
           >
-            ✕
+            <X className="w-4 h-4" strokeWidth={2.5} />
           </button>
         </div>
         <div className="p-4">

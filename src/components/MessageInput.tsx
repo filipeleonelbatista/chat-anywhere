@@ -1,8 +1,9 @@
 "use client";
 import React, { useState, useRef } from "react";
-import { ImagePicker } from "./ImagePicker";
+import { ImagePlus, Send, X } from "lucide-react";
 import { LinkPreview } from "./LinkPreview";
 import { useLinkDetection } from "@/hooks/useLinkDetection";
+import { isValidFileType, isValidFileSize } from "@/utils/validation";
 import type { LinkPreview as LinkPreviewType, ReplyTo } from "@/types";
 
 interface Props {
@@ -15,9 +16,9 @@ interface Props {
 
 export function MessageInput({ onSend, onSendImage, disabled, replyingTo, onCancelReply }: Props) {
   const [text, setText] = useState("");
-  const [showImagePicker, setShowImagePicker] = useState(false);
   const { links, detectLinks, clearLinks } = useLinkDetection();
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -72,8 +73,23 @@ export function MessageInput({ onSend, onSendImage, disabled, replyingTo, onCanc
     });
   };
 
-  const handleImageSelected = async (file: File) => {
-    setShowImagePicker(false);
+  const handleImageButtonClick = () => {
+    if (disabled) return;
+    imageInputRef.current?.click();
+  };
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!isValidFileType(file)) {
+      alert("Tipo de arquivo inválido. Use JPG, PNG, GIF ou WebP.");
+      return;
+    }
+    if (!isValidFileSize(file)) {
+      alert("Arquivo muito grande. Máximo 5 MB.");
+      return;
+    }
     onSendImage(file);
   };
 
@@ -95,7 +111,7 @@ export function MessageInput({ onSend, onSendImage, disabled, replyingTo, onCanc
             className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-black/5 dark:hover:bg-white/10 flex-shrink-0"
             aria-label="Cancelar reply"
           >
-            ✕
+            <X className="w-4 h-4" strokeWidth={2.5} />
           </button>
         </div>
       )}
@@ -109,25 +125,21 @@ export function MessageInput({ onSend, onSendImage, disabled, replyingTo, onCanc
         className="w-[95%]"
       >
         <div className="flex items-end gap-0 bg-white dark:bg-gray-800 rounded-[28px] px-1 py-0.5 shadow-lg mb-3 relative">
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            onChange={handleImageFileChange}
+            className="hidden"
+          />
           <button
             type="button"
-            onClick={() => setShowImagePicker(!showImagePicker)}
-            className="w-12 h-12 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex-shrink-0 mb-[1.8px]"
-            aria-label="Attach image"
+            onClick={handleImageButtonClick}
+            disabled={disabled}
+            className="w-12 h-12 flex items-center justify-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors flex-shrink-0 mb-[1.8px] disabled:opacity-40 disabled:pointer-events-none"
+            aria-label="Adicionar imagem"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
+            <ImagePlus className="w-6 h-6" strokeWidth={2} />
           </button>
           <div className="flex-1 relative min-w-0">
             <textarea
@@ -147,11 +159,8 @@ export function MessageInput({ onSend, onSendImage, disabled, replyingTo, onCanc
             className="w-12 h-12 flex items-center justify-center bg-whatsapp-green hover:bg-whatsapp-green-dark disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white rounded-full transition-colors flex-shrink-0 mb-[1.8px]"
             aria-label="Send message"
           >
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M1.101 21.757L23.8 12.028 1.101 2.3l.011 7.912 13.623 1.816-13.623 1.817-.011 7.912z" />
-            </svg>
+            <Send className="w-6 h-6" strokeWidth={2} />
           </button>
-          {showImagePicker && <ImagePicker onSelect={handleImageSelected} />}
         </div>
       </form>
     </div>

@@ -9,6 +9,10 @@ import React, {
 } from "react";
 import { useSSE } from "@/hooks/useSSE";
 import type { Message, ConnectionStatus, SSEAction, ReplyTo } from "@/types";
+import {
+  ROOM_HISTORY_INITIAL_LIMIT,
+  ROOM_HISTORY_PAGE,
+} from "@/lib/room-history";
 
 interface RoomContextType {
   messages: Message[];
@@ -42,7 +46,8 @@ export function RoomProvider({
   const [messages, setMessages] = useState<Message[]>([]);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [loadingOlder, setLoadingOlder] = useState(false);
-  const oldestTimestampRef = useRef<number>(Infinity);
+  /** Minimum timestamp in the current list; used to load the next older page inside the 24h window. */
+  const oldestTimestampRef = useRef<number | null>(null);
 
   const handleNewMessage = useCallback((payload: SSEAction) => {
     if (payload.action === "message") {
@@ -137,39 +142,80 @@ export function RoomProvider({
 
   const loadOlderMessages = useCallback(async () => {
     if (loadingOlder || !hasMoreMessages) return;
+    if (oldestTimestampRef.current == null) return;
     setLoadingOlder(true);
     try {
-      const since =
-        oldestTimestampRef.current === Infinity
-          ? Date.now()
-          : oldestTimestampRef.current;
+      const before = oldestTimestampRef.current;
       const res = await fetch(
-        `/api/rooms/${roomId}/messages?since=${since}&limit=20`,
+        `/api/rooms/${roomId}/messages?before=${before}&limit=${ROOM_HISTORY_PAGE}`,
         { headers: { "x-user-id": userId } }
       );
       if (!res.ok) throw new Error("Failed to load older messages");
       const olderMessages: Message[] = await res.json();
-      if (olderMessages.length < 20) setHasMoreMessages(false);
+      if (olderMessages.length === 0) {
+        setHasMoreMessages(false);
+        return;
+      }
+      const oldestNew = Math.min(
+        ...olderMessages.map((m) => m.timestamp)
+      );
+      oldestTimestampRef.current = Math.min(
+        oldestTimestampRef.current,
+        oldestNew
+      );
       setMessages((prev) => {
         const existingIds = new Set(prev.map((m) => m.id));
         const newMsgs = olderMessages.filter((m) => !existingIds.has(m.id));
-        if (newMsgs.length > 0) {
-          oldestTimestampRef.current = Math.min(
-            ...newMsgs.map((m) => m.timestamp)
-          );
-        }
         return [...newMsgs, ...prev];
       });
+      if (olderMessages.length < ROOM_HISTORY_PAGE) {
+        setHasMoreMessages(false);
+      }
     } finally {
       setLoadingOlder(false);
     }
   }, [roomId, userId, loadingOlder, hasMoreMessages]);
 
-  const loadOlderRef = useRef(loadOlderMessages);
-  loadOlderRef.current = loadOlderMessages;
   useEffect(() => {
-    loadOlderRef.current();
-  }, []);
+    let cancelled = false;
+    oldestTimestampRef.current = null;
+    setMessages([]);
+    setHasMoreMessages(true);
+    setLoadingOlder(true);
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/rooms/${roomId}/messages?limit=${ROOM_HISTORY_INITIAL_LIMIT}`,
+          { headers: { "x-user-id": userId } }
+        );
+        if (!res.ok) throw new Error("Failed to load messages");
+        const initial: Message[] = await res.json();
+        if (cancelled) return;
+        setMessages(initial);
+        if (initial.length > 0) {
+          oldestTimestampRef.current = Math.min(
+            ...initial.map((m) => m.timestamp)
+          );
+        } else {
+          oldestTimestampRef.current = null;
+        }
+        setHasMoreMessages(
+          initial.length === ROOM_HISTORY_INITIAL_LIMIT
+        );
+      } catch {
+        if (!cancelled) {
+          setMessages([]);
+          oldestTimestampRef.current = null;
+          setHasMoreMessages(false);
+        }
+      } finally {
+        if (!cancelled) setLoadingOlder(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [roomId, userId]);
 
   const reactToMessage = useCallback(
     async (messageId: string, emoji: string) => {

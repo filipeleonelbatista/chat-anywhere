@@ -1,16 +1,18 @@
 "use client";
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { HelpCircle, Users, Share2 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { RoomProvider } from "@/context/RoomContext";
 import { useRoom } from "@/context/RoomContext";
 import { UserRegistrationModal } from "./UserRegistrationModal";
+import { UserAuthLoadingScreen } from "./UserAuthLoadingScreen";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { HelpModal } from "./HelpModal";
 import { ThemeToggle } from "./ThemeToggle";
 import { PeopleModal } from "./PeopleModal";
-import { uploadImage } from "@/lib/blob";
+import { EditProfileModal } from "./EditProfileModal";
 import type { LinkPreview, Message, ReplyTo } from "@/types";
 
 interface Props {
@@ -18,9 +20,10 @@ interface Props {
 }
 
 function ChatContent({ roomId }: { roomId: string }) {
-  const { user } = useUser();
+  const { user, updateProfile } = useUser();
   const [helpOpen, setHelpOpen] = useState(false);
   const [peopleOpen, setPeopleOpen] = useState(false);
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
   const {
     messages,
     status,
@@ -31,6 +34,37 @@ function ChatContent({ roomId }: { roomId: string }) {
   } = useRoom();
 
   const [replyingTo, setReplyingTo] = useState<ReplyTo | null>(null);
+  const [shareToastVisible, setShareToastVisible] = useState(false);
+  const shareToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (shareToastTimerRef.current) {
+        clearTimeout(shareToastTimerRef.current);
+      }
+    };
+  }, []);
+
+  const showShareToast = useCallback(() => {
+    if (shareToastTimerRef.current) {
+      clearTimeout(shareToastTimerRef.current);
+    }
+    setShareToastVisible(true);
+    shareToastTimerRef.current = setTimeout(() => {
+      setShareToastVisible(false);
+      shareToastTimerRef.current = null;
+    }, 3500);
+  }, []);
+
+  const handleShareRoom = useCallback(async () => {
+    const url = `${window.location.origin}/${encodeURIComponent(roomId)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      showShareToast();
+    } catch {
+      window.prompt("Copie o link da sala:", url);
+    }
+  }, [roomId, showShareToast]);
 
   const handleReply = useCallback((message: Message) => {
     setReplyingTo({
@@ -51,7 +85,17 @@ function ChatContent({ roomId }: { roomId: string }) {
 
   const handleSendImage = async (file: File) => {
     try {
-      const { url } = await uploadImage(file);
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload/image", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error || res.statusText);
+      }
+      const { url } = (await res.json()) as { url: string };
       sendMessage("", { imageUrl: url });
     } catch {
       alert("Falha ao enviar imagem. Tente novamente.");
@@ -70,9 +114,15 @@ function ChatContent({ roomId }: { roomId: string }) {
       {/* Header */}
       <div className="chat-header flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-xl flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => setEditProfileOpen(true)}
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-white/20 text-xl transition hover:bg-white/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+            aria-label="Editar nome e avatar"
+            title="Editar perfil"
+          >
             {user!.avatar}
-          </div>
+          </button>
           <div className="min-w-0">
             <h1 className="font-semibold text-sm truncate">#{roomId}</h1>
             <div
@@ -95,26 +145,36 @@ function ChatContent({ roomId }: { roomId: string }) {
         <div className="flex items-center gap-1 flex-shrink-0">
           <ThemeToggle />
           <button
+            type="button"
+            onClick={() => void handleShareRoom()}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-white transition-colors hover:bg-white/20"
+            aria-label="Compartilhar link da sala"
+            title="Copiar link da sala"
+          >
+            <Share2 className="h-[18px] w-[18px]" strokeWidth={2} />
+          </button>
+          <button
             onClick={() => setPeopleOpen(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 text-white transition-colors text-sm"
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 text-white transition-colors"
             aria-label="Pessoas na sala"
             title="Pessoas na sala"
           >
-            👥
+            <Users className="w-[18px] h-[18px]" strokeWidth={2} />
           </button>
           <button
             onClick={() => setHelpOpen(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 text-white transition-colors text-sm font-bold"
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 text-white transition-colors"
             aria-label="Ajuda"
             title="Como funciona"
           >
-            ?
+            <HelpCircle className="w-[18px] h-[18px]" strokeWidth={2} />
           </button>
         </div>
       </div>
       {/* Messages */}
       <MessageList
         messages={messages}
+        roomId={roomId}
         userId={user!.id}
         onLoadOlder={loadOlderMessages}
         hasMore={hasMoreMessages}
@@ -137,12 +197,30 @@ function ChatContent({ roomId }: { roomId: string }) {
         isOpen={peopleOpen}
         onClose={() => setPeopleOpen(false)}
       />
+      <EditProfileModal
+        isOpen={editProfileOpen}
+        onClose={() => setEditProfileOpen(false)}
+        user={user!}
+        onSave={(name, avatar) => {
+          updateProfile(name, avatar);
+          setEditProfileOpen(false);
+        }}
+      />
+      {shareToastVisible ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed bottom-24 left-1/2 z-[60] max-w-[min(90vw,20rem)] -translate-x-1/2 rounded-lg bg-gray-900 px-4 py-2.5 text-center text-sm text-white shadow-lg dark:bg-gray-100 dark:text-gray-900"
+        >
+          Link da sala copiado para a área de transferência.
+        </div>
+      ) : null}
     </div>
   );
 }
 
 export function ChatInterface({ roomId }: Props) {
-  const { user, register, isRegistered } = useUser();
+  const { user, register, isRegistered, isAuthReady } = useUser();
 
   const handleRegister = (
     name: string,
@@ -151,6 +229,10 @@ export function ChatInterface({ roomId }: Props) {
   ) => {
     register(name, email, avatar);
   };
+
+  if (!isAuthReady) {
+    return <UserAuthLoadingScreen />;
+  }
 
   if (!isRegistered || !user) {
     return (

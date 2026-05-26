@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateMessage, getRecentMessages } from "@/lib/kv";
+import { applyReactionAtomic } from "@/lib/kv";
 import { broadcastToRoom } from "@/lib/sse";
-import type { Reaction, SSEAction } from "@/types";
+import { REACTION_EMOJIS, type ReactionEmoji, type SSEAction } from "@/types";
+
+const ALLOWED_EMOJI = new Set<string>(REACTION_EMOJIS);
 
 export async function POST(
   request: NextRequest,
@@ -9,7 +11,12 @@ export async function POST(
 ) {
   try {
     const { roomId, messageId } = await params;
-    const { emoji, userId, userName } = await request.json();
+    const body = await request.json();
+    const { emoji, userId, userName } = body as {
+      emoji?: string;
+      userId?: string;
+      userName?: string;
+    };
 
     if (!emoji || !userId) {
       return NextResponse.json(
@@ -18,28 +25,33 @@ export async function POST(
       );
     }
 
-    const messages = await getRecentMessages(roomId, 100);
-    const message = messages.find((m) => m.id === messageId);
-    if (!message) {
+    if (!ALLOWED_EMOJI.has(emoji)) {
+      return NextResponse.json({ error: "Invalid emoji" }, { status: 400 });
+    }
+
+    const reactionEmoji = emoji as ReactionEmoji;
+    const safeName = typeof userName === "string" ? userName : "";
+
+    const result = await applyReactionAtomic(
+      roomId,
+      messageId,
+      userId,
+      safeName,
+      reactionEmoji
+    );
+
+    if (!result.ok && "notFound" in result && result.notFound) {
       return NextResponse.json({ error: "Message not found" }, { status: 404 });
     }
-
-    let reactions = message.reactions || [];
-
-    const existingIndex = reactions.findIndex((r) => r.userId === userId);
-    if (existingIndex !== -1) {
-      if (reactions[existingIndex].emoji === emoji) {
-        reactions = reactions.filter((r) => r.userId !== userId);
-      } else {
-        reactions[existingIndex] = { emoji, userId, userName } as Reaction;
-      }
-    } else {
-      reactions.push({ emoji, userId, userName } as Reaction);
+    if (!result.ok) {
+      console.error("[react]", "error" in result ? result.error : result);
+      return NextResponse.json(
+        { error: "Failed to react" },
+        { status: 500 }
+      );
     }
 
-    await updateMessage(roomId, messageId, {
-      reactions: JSON.stringify(reactions),
-    });
+    const { reactions } = result;
 
     const payload: SSEAction = {
       action: "react",
@@ -49,7 +61,8 @@ export async function POST(
     broadcastToRoom(roomId, payload);
 
     return NextResponse.json(payload);
-  } catch {
+  } catch (err) {
+    console.error("[react]", err);
     return NextResponse.json(
       { error: "Failed to react" },
       { status: 500 }

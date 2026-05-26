@@ -36,14 +36,6 @@ export function broadcastToRoom(roomId: string, data: unknown): void {
   });
 }
 
-export function getRoomClientCount(roomId: string): number {
-  let count = 0;
-  clients.forEach((client) => {
-    if (client.roomId === roomId) count++;
-  });
-  return count;
-}
-
 export function createSSEStream(
   roomId: string,
   clientId: string,
@@ -70,9 +62,46 @@ export function createSSEStream(
           `event: connected\ndata: {"clientId":"${clientId}"}\n\n`
         )
       );
+      // Tab count in Redis (shared across serverless instances) → join on first tab only
+      void (async () => {
+        try {
+          const { registerSseTab } = await import("@/lib/sse-presence");
+          const tabCount = await registerSseTab(roomId, userId, clientId);
+          if (tabCount === 1) {
+            const { broadcastPresence } = await import("@/lib/presence");
+            await broadcastPresence(
+              roomId,
+              userId,
+              userName,
+              userAvatar,
+              "join"
+            );
+          }
+        } catch (e) {
+          console.error("[sse] Redis register tab / join", e);
+        }
+      })();
     },
     cancel() {
       removeClient(clientId);
+      void (async () => {
+        try {
+          const { unregisterSseTab } = await import("@/lib/sse-presence");
+          const tabCount = await unregisterSseTab(roomId, userId, clientId);
+          if (tabCount === 0) {
+            const { broadcastPresence } = await import("@/lib/presence");
+            await broadcastPresence(
+              roomId,
+              userId,
+              userName,
+              userAvatar,
+              "leave"
+            );
+          }
+        } catch (e) {
+          console.error("[sse] Redis unregister tab / leave", e);
+        }
+      })();
     },
   });
 }
