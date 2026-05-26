@@ -1,4 +1,5 @@
 import { kv } from "@vercel/kv";
+import type { Message, MessageStatus } from "@/types";
 
 const MESSAGE_TTL = 86400; // 24 hours in seconds
 const MESSAGE_BATCH = 20;
@@ -62,7 +63,24 @@ export async function getMessages(
   );
   return results
     .filter((r): r is Record<string, unknown> => r !== null)
-    .map((r) => r as unknown as StoredMessage)
+    .map((r) => {
+      const fields = r as Record<string, string>;
+      const message: Message = {
+        id: fields.id,
+        roomId: fields.roomId,
+        senderId: fields.senderId,
+        senderName: fields.senderName,
+        senderAvatar: fields.senderAvatar,
+        content: fields.content,
+        type: fields.type as Message["type"],
+        imageUrl: fields.imageUrl,
+        linkPreview: fields.linkPreview ? JSON.parse(fields.linkPreview) : undefined,
+        status: (fields.status as MessageStatus) || "sent",
+        timestamp: Number(fields.timestamp),
+        createdAt: fields.createdAt,
+      };
+      return message;
+    })
     .sort((a, b) => a.timestamp - b.timestamp);
 }
 
@@ -79,7 +97,24 @@ export async function getRecentMessages(
   );
   return results
     .filter((r): r is Record<string, unknown> => r !== null)
-    .map((r) => r as unknown as StoredMessage)
+    .map((r) => {
+      const fields = r as Record<string, string>;
+      const message: Message = {
+        id: fields.id,
+        roomId: fields.roomId,
+        senderId: fields.senderId,
+        senderName: fields.senderName,
+        senderAvatar: fields.senderAvatar,
+        content: fields.content,
+        type: fields.type as Message["type"],
+        imageUrl: fields.imageUrl,
+        linkPreview: fields.linkPreview ? JSON.parse(fields.linkPreview) : undefined,
+        status: (fields.status as MessageStatus) || "sent",
+        timestamp: Number(fields.timestamp),
+        createdAt: fields.createdAt,
+      };
+      return message;
+    })
     .sort((a, b) => a.timestamp - b.timestamp);
 }
 
