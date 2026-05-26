@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { Message, ConnectionStatus } from "@/types";
+import type { ConnectionStatus, SSEAction } from "@/types";
 
 interface UseSSEOptions {
   roomId: string;
   userId: string;
   userName: string;
   userAvatar: string;
-  onMessage: (data: { message: Message; tempId?: string }) => void;
+  onMessage: (data: SSEAction) => void;
 }
 
 export function useSSE({ roomId, userId, userName, userAvatar, onMessage }: UseSSEOptions) {
@@ -35,7 +35,7 @@ export function useSSE({ roomId, userId, userName, userAvatar, onMessage }: UseS
 
     es.addEventListener("message", (event) => {
       try {
-        const data = JSON.parse(event.data) as { message: Message; tempId?: string };
+        const data = JSON.parse(event.data) as SSEAction;
         onMessage(data);
       } catch {
         // Ignore malformed messages

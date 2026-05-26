@@ -8,7 +8,7 @@ import React, {
   useEffect,
 } from "react";
 import { useSSE } from "@/hooks/useSSE";
-import type { Message, ConnectionStatus } from "@/types";
+import type { Message, ConnectionStatus, SSEAction } from "@/types";
 
 interface RoomContextType {
   messages: Message[];
@@ -17,6 +17,8 @@ interface RoomContextType {
     content: string,
     opts?: { imageUrl?: string; linkPreview?: Message["linkPreview"] }
   ) => Promise<void>;
+  reactToMessage: (messageId: string, emoji: string) => Promise<void>;
+  deleteMessage: (messageId: string) => Promise<void>;
   loadOlderMessages: () => Promise<void>;
   hasMoreMessages: boolean;
   loadingOlder: boolean;
@@ -42,20 +44,38 @@ export function RoomProvider({
   const [loadingOlder, setLoadingOlder] = useState(false);
   const oldestTimestampRef = useRef<number>(Infinity);
 
-  const handleNewMessage = useCallback((payload: { message: Message; tempId?: string }) => {
-    const { message, tempId } = payload;
-    setMessages((prev) => {
-      if (prev.some((m) => m.id === message.id)) return prev;
-      if (tempId) {
-        const pendingIndex = prev.findIndex((m) => m.id === tempId);
-        if (pendingIndex !== -1) {
-          const updated = [...prev];
-          updated[pendingIndex] = message;
-          return updated;
+  const handleNewMessage = useCallback((payload: SSEAction) => {
+    if (payload.action === "message") {
+      const { message, tempId } = payload;
+      setMessages((prev) => {
+        if (prev.some((m) => m.id === message.id)) return prev;
+        if (tempId) {
+          const pendingIndex = prev.findIndex((m) => m.id === tempId);
+          if (pendingIndex !== -1) {
+            const updated = [...prev];
+            updated[pendingIndex] = message;
+            return updated;
+          }
         }
-      }
-      return [...prev, message];
-    });
+        return [...prev, message];
+      });
+    } else if (payload.action === "react") {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === payload.messageId
+            ? { ...m, reactions: payload.reactions }
+            : m
+        )
+      );
+    } else if (payload.action === "delete") {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === payload.messageId
+            ? { ...m, deleted: true, content: "", imageUrl: undefined, linkPreview: undefined, reactions: [] }
+            : m
+        )
+      );
+    }
   }, []);
 
   const { status } = useSSE({ roomId, userId, userName, userAvatar, onMessage: handleNewMessage });
@@ -146,12 +166,44 @@ export function RoomProvider({
     loadOlderRef.current();
   }, []);
 
+  const reactToMessage = useCallback(
+    async (messageId: string, emoji: string) => {
+      try {
+        await fetch(`/api/rooms/${roomId}/messages/${messageId}/react`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ emoji, userId, userName }),
+        });
+      } catch {
+        // Silently fail — SSE will correct state if needed
+      }
+    },
+    [roomId, userId, userName]
+  );
+
+  const deleteMessage = useCallback(
+    async (messageId: string) => {
+      try {
+        await fetch(`/api/rooms/${roomId}/messages/${messageId}/delete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId }),
+        });
+      } catch {
+        // Silently fail
+      }
+    },
+    [roomId, userId]
+  );
+
   return (
     <RoomContext.Provider
       value={{
         messages,
         status,
         sendMessage,
+        reactToMessage,
+        deleteMessage,
         loadOlderMessages,
         hasMoreMessages,
         loadingOlder,
