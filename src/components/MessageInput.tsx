@@ -3,15 +3,17 @@ import React, { useState, useRef } from "react";
 import { ImagePicker } from "./ImagePicker";
 import { LinkPreview } from "./LinkPreview";
 import { useLinkDetection } from "@/hooks/useLinkDetection";
-import type { LinkPreview as LinkPreviewType } from "@/types";
+import type { LinkPreview as LinkPreviewType, ReplyTo } from "@/types";
 
 interface Props {
   onSend: (content: string, linkPreview?: LinkPreviewType) => void;
   onSendImage: (file: File) => void;
   disabled?: boolean;
+  replyingTo?: ReplyTo | null;
+  onCancelReply?: () => void;
 }
 
-export function MessageInput({ onSend, onSendImage, disabled }: Props) {
+export function MessageInput({ onSend, onSendImage, disabled, replyingTo, onCancelReply }: Props) {
   const [text, setText] = useState("");
   const [showImagePicker, setShowImagePicker] = useState(false);
   const { links, detectLinks, clearLinks } = useLinkDetection();
@@ -77,6 +79,26 @@ export function MessageInput({ onSend, onSendImage, disabled }: Props) {
 
   return (
     <div className="relative w-full flex flex-col items-center">
+      {replyingTo && (
+        <div className="w-[95%] mb-1 bg-gray-100 dark:bg-gray-700 rounded-lg px-3 py-2 flex items-center gap-2 text-sm border-l-4 border-whatsapp-green">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-whatsapp-green-dark dark:text-whatsapp-green truncate">
+              {replyingTo.senderName}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+              {replyingTo.content}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancelReply}
+            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-black/5 dark:hover:bg-white/10 flex-shrink-0"
+            aria-label="Cancelar reply"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {links.length > 0 && (
         <div className="w-[95%] mb-1">
           <LinkPreview url={links[0].url} />
