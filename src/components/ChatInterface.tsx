@@ -11,6 +11,7 @@ import { HelpModal } from "./HelpModal";
 import { ThemeToggle } from "./ThemeToggle";
 import { PeopleModal } from "./PeopleModal";
 import { uploadImage } from "@/lib/blob";
+import type { LinkPreview } from "@/types";
 
 interface Props {
   roomId: string;
@@ -29,8 +30,8 @@ function ChatContent({ roomId }: { roomId: string }) {
     loadingOlder,
   } = useRoom();
 
-  const handleSend = (content: string) => {
-    sendMessage(content);
+  const handleSend = (content: string, linkPreview?: LinkPreview) => {
+    sendMessage(content, { linkPreview });
   };
 
   const handleSendImage = async (file: File) => {
@@ -42,16 +43,6 @@ function ChatContent({ roomId }: { roomId: string }) {
     }
   };
 
-  useEffect(() => {
-    const handler = () => {
-      const vh = window.visualViewport?.height || window.innerHeight;
-      document.documentElement.style.setProperty("--vh", `${vh}px`);
-    };
-    handler();
-    window.visualViewport?.addEventListener("resize", handler);
-    return () => window.visualViewport?.removeEventListener("resize", handler);
-  }, []);
-
   const statusLabel =
     status.type === "connected"
       ? "Conectado"
@@ -60,7 +51,7 @@ function ChatContent({ roomId }: { roomId: string }) {
         : "Desconectado";
 
   return (
-    <div className="flex flex-col" style={{ height: "var(--vh, 100dvh)" }}>
+    <div className="flex flex-col h-full w-full mx-auto max-w-3xl lg:max-w-none shadow-2xl relative bg-whatsapp-bg dark:bg-whatsapp-bg-dark" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
       {/* Header */}
       <div className="chat-header flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">

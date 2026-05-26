@@ -40,7 +40,12 @@ export function LinkPreview({ url }: Props) {
   if (!preview) return null;
 
   return (
-    <div className="flex items-start gap-2 p-2 mt-1 bg-gray-50 dark:bg-gray-800 rounded-lg border text-xs">
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="flex items-start gap-2 p-2 mt-1 bg-gray-50 dark:bg-gray-800 rounded-lg border text-xs hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+    >
       {preview.image && (
         <img
           src={preview.image}
@@ -52,6 +57,6 @@ export function LinkPreview({ url }: Props) {
         <p className="font-semibold truncate">{preview.title}</p>
         <p className="text-gray-500 line-clamp-1">{preview.description}</p>
       </div>
-    </div>
+    </a>
   );
 }

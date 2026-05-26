@@ -121,7 +121,7 @@ export default function RootLayout({
           `
         }} />
       </head>
-      <body className="h-screen overflow-hidden">
+      <body className="h-[100dvh] overflow-hidden">
         {/* JSON-LD Structured Data */}
         <Script
           id="schema-structured-data"

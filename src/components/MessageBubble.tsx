@@ -85,6 +85,8 @@ export function MessageBubble({ message, isOwn }: Props) {
   const { reactToMessage, deleteMessage } = useRoom();
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const positioningRef = useRef(true);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
@@ -96,6 +98,32 @@ export function MessageBubble({ message, isOwn }: Props) {
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
+
+  // Adjust dropdown position to stay within viewport
+  useEffect(() => {
+    if (!menuOpen) {
+      positioningRef.current = true;
+      return;
+    }
+    const el = menuRef.current;
+    if (!el) return;
+
+    const rect = el.getBoundingClientRect();
+
+    el.style.right = "";
+    el.style.left = "";
+    el.style.top = "";
+    el.style.bottom = "";
+
+    if (rect.right > window.innerWidth) {
+      el.style.right = "auto";
+      el.style.left = "0";
+    }
+    if (rect.bottom > window.innerHeight) {
+      el.style.top = "auto";
+      el.style.bottom = "calc(100% + 8px)";
+    }
   }, [menuOpen]);
 
   return (

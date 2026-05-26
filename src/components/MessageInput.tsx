@@ -3,9 +3,10 @@ import React, { useState, useRef } from "react";
 import { ImagePicker } from "./ImagePicker";
 import { LinkPreview } from "./LinkPreview";
 import { useLinkDetection } from "@/hooks/useLinkDetection";
+import type { LinkPreview as LinkPreviewType } from "@/types";
 
 interface Props {
-  onSend: (content: string) => void;
+  onSend: (content: string, linkPreview?: LinkPreviewType) => void;
   onSendImage: (file: File) => void;
   disabled?: boolean;
 }
@@ -13,14 +14,31 @@ interface Props {
 export function MessageInput({ onSend, onSendImage, disabled }: Props) {
   const [text, setText] = useState("");
   const [showImagePicker, setShowImagePicker] = useState(false);
-  const { links, detectLinks } = useLinkDetection();
+  const { links, detectLinks, clearLinks } = useLinkDetection();
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!text.trim() || disabled) return;
-    onSend(text.trim());
+
+    let linkPreviewData: LinkPreviewType | undefined;
+    if (links.length > 0) {
+      try {
+        const res = await fetch("/api/link-preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: links[0].url }),
+        });
+        const data = await res.json();
+        if (data.title) {
+          linkPreviewData = { url: links[0].url, ...data };
+        }
+      } catch {}
+    }
+
+    onSend(text.trim(), linkPreviewData);
     setText("");
+    clearLinks();
     inputRef.current?.focus();
   };
 
@@ -58,7 +76,12 @@ export function MessageInput({ onSend, onSendImage, disabled }: Props) {
   };
 
   return (
-    <div className="relative w-full flex justify-center">
+    <div className="relative w-full flex flex-col items-center">
+      {links.length > 0 && (
+        <div className="w-[95%] mb-1">
+          <LinkPreview url={links[0].url} />
+        </div>
+      )}
       <form
         onSubmit={handleSubmitAndReset}
         className="w-[95%]"
@@ -95,7 +118,6 @@ export function MessageInput({ onSend, onSendImage, disabled }: Props) {
               className="w-full resize-none px-3 py-3 bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 outline-none overflow-y-auto text-sm leading-5"
               disabled={disabled}
             />
-            {links.length > 0 && <LinkPreview url={links[0].url} />}
           </div>
           <button
             type="submit"

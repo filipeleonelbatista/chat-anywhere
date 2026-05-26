@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 interface PreviewData {
+  url: string;
   title: string;
   description: string;
   image?: string;
@@ -24,6 +25,7 @@ export async function POST(request: NextRequest) {
 
     const html = await res.text();
     const preview: PreviewData = {
+      url,
       title:
         extractMeta(html, "og:title") || extractTitle(html) || url,
       description:

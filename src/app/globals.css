@@ -18,7 +18,9 @@
     @apply bg-white dark:bg-gray-700 rounded-lg px-3 py-2 max-w-[80%] shadow-sm;
   }
   .chat-header {
-    @apply bg-whatsapp-header text-white px-4 py-3 shadow-md;
+    @apply bg-whatsapp-header text-white px-4 shadow-md;
+    padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+    padding-bottom: 0.75rem;
   }
   .chat-input-bg {
     @apply bg-whatsapp-input dark:bg-gray-800;

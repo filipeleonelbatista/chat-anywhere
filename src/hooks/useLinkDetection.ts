@@ -27,5 +27,9 @@ export function useLinkDetection() {
     return detected;
   }, []);
 
-  return { links, detectLinks };
+  const clearLinks = useCallback(() => {
+    setLinks([]);
+  }, []);
+
+  return { links, detectLinks, clearLinks };
 }
