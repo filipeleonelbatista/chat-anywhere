@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { LgpdConsentBanner } from "@/components/LgpdConsentBanner";
 import "./globals.css";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://chat-anywhere.vercel.app";
@@ -152,6 +153,7 @@ export default function RootLayout({
           }}
         />
         {children}
+        <LgpdConsentBanner />
       </body>
     </html>
   );

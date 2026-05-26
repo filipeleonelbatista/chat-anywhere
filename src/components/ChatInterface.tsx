@@ -110,7 +110,13 @@ function ChatContent({ roomId }: { roomId: string }) {
         : "Desconectado";
 
   return (
-    <div className="flex flex-col h-full w-full mx-auto max-w-3xl lg:max-w-none shadow-2xl relative bg-whatsapp-bg dark:bg-whatsapp-bg-dark" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+    <div
+      className="flex flex-col h-full w-full mx-auto max-w-3xl lg:max-w-none shadow-2xl relative bg-whatsapp-bg dark:bg-whatsapp-bg-dark"
+      style={{
+        paddingBottom:
+          "calc(env(safe-area-inset-bottom, 0px) + var(--lgpd-banner, 0px))",
+      }}
+    >
       {/* Header */}
       <div className="chat-header flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
