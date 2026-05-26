@@ -42,9 +42,18 @@ export function RoomProvider({
   const [loadingOlder, setLoadingOlder] = useState(false);
   const oldestTimestampRef = useRef<number>(Infinity);
 
-  const handleNewMessage = useCallback((message: Message) => {
+  const handleNewMessage = useCallback((payload: { message: Message; tempId?: string }) => {
+    const { message, tempId } = payload;
     setMessages((prev) => {
       if (prev.some((m) => m.id === message.id)) return prev;
+      if (tempId) {
+        const pendingIndex = prev.findIndex((m) => m.id === tempId);
+        if (pendingIndex !== -1) {
+          const updated = [...prev];
+          updated[pendingIndex] = message;
+          return updated;
+        }
+      }
       return [...prev, message];
     });
   }, []);
@@ -56,7 +65,9 @@ export function RoomProvider({
       content: string,
       opts?: { imageUrl?: string; linkPreview?: Message["linkPreview"] }
     ) => {
-      const message = {
+      const tempId = crypto.randomUUID();
+      const pendingMessage: Message = {
+        id: tempId,
         roomId,
         senderId: userId,
         senderName: userName,
@@ -69,20 +80,31 @@ export function RoomProvider({
             : ("text" as const),
         ...(opts?.imageUrl && { imageUrl: opts.imageUrl }),
         ...(opts?.linkPreview && { linkPreview: opts.linkPreview }),
+        status: "pending",
+        timestamp: Date.now(),
+        createdAt: new Date().toISOString(),
       };
 
-      const res = await fetch(`/api/rooms/${roomId}/messages`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-user-id": userId,
-        },
-        body: JSON.stringify(message),
-      });
+      setMessages((prev) => [...prev, pendingMessage]);
 
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`Failed to send message: ${err}`);
+      try {
+        const res = await fetch(`/api/rooms/${roomId}/messages`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-user-id": userId,
+          },
+          body: JSON.stringify({ ...pendingMessage, tempId }),
+        });
+
+        if (!res.ok) {
+          const err = await res.text();
+          throw new Error(`Failed to send message: ${err}`);
+        }
+      } catch {
+        setMessages((prev) =>
+          prev.filter((m) => m.id !== tempId)
+        );
       }
     },
     [roomId, userId, userName, userAvatar]

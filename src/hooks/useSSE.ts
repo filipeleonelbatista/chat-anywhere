@@ -7,7 +7,7 @@ interface UseSSEOptions {
   userId: string;
   userName: string;
   userAvatar: string;
-  onMessage: (message: Message) => void;
+  onMessage: (data: { message: Message; tempId?: string }) => void;
 }
 
 export function useSSE({ roomId, userId, userName, userAvatar, onMessage }: UseSSEOptions) {
@@ -35,8 +35,8 @@ export function useSSE({ roomId, userId, userName, userAvatar, onMessage }: UseS
 
     es.addEventListener("message", (event) => {
       try {
-        const message = JSON.parse(event.data) as Message;
-        onMessage(message);
+        const data = JSON.parse(event.data) as { message: Message; tempId?: string };
+        onMessage(data);
       } catch {
         // Ignore malformed messages
       }
