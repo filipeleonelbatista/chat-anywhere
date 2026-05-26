@@ -1,7 +1,9 @@
 "use client";
-import React from "react";
-import type { Message } from "@/types";
+import React, { useState, useRef, useEffect } from "react";
+import type { Message, Reaction } from "@/types";
+import { REACTION_EMOJIS } from "@/types";
 import { formatTimestamp } from "@/utils/formatting";
+import { useRoom } from "@/context/RoomContext";
 
 const URL_REGEX = /(https?:\/\/[^\s<]+[^\s<.,;:!?)\]}>])/g;
 
@@ -58,12 +60,44 @@ function linkify(text: string): React.ReactNode {
   return parts.length > 0 ? parts : text;
 }
 
+function aggregateReactions(reactions: Reaction[]) {
+  const map = new Map<string, { emoji: string; count: number; users: string[] }>();
+  for (const r of reactions) {
+    const existing = map.get(r.emoji);
+    if (existing) {
+      existing.count++;
+      existing.users.push(r.userName);
+    } else {
+      map.set(r.emoji, { emoji: r.emoji, count: 1, users: [r.userName] });
+    }
+  }
+  return Array.from(map.values());
+}
+
 interface Props {
   message: Message;
   isOwn: boolean;
 }
 
 export function MessageBubble({ message, isOwn }: Props) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
+  const { reactToMessage, deleteMessage } = useRoom();
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+        setEmojiPickerOpen(false);
+      }
+    };
+    if (menuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
+
   return (
     <div className={`flex ${isOwn ? "justify-end" : "justify-start"} mb-2 items-end gap-2`}>
       {!isOwn && (
@@ -72,7 +106,7 @@ export function MessageBubble({ message, isOwn }: Props) {
         </div>
       )}
       <div
-        className={`max-w-[80%] rounded-lg px-3 py-2 shadow-sm ${
+        className={`max-w-[80%] relative group rounded-lg px-3 py-2 shadow-sm ${
           isOwn
             ? "bg-whatsapp-bubble dark:bg-[#005C4B] rounded-br-sm"
             : "bg-white dark:bg-gray-700 rounded-bl-sm"
@@ -83,41 +117,122 @@ export function MessageBubble({ message, isOwn }: Props) {
             {message.senderName}
           </p>
         )}
-        {message.type === "image" && message.imageUrl && (
-          <img
-            src={message.imageUrl}
-            alt="Shared image"
-            className="max-w-full rounded-lg mb-1 cursor-pointer"
-            onClick={() => window.open(message.imageUrl, "_blank")}
-          />
-        )}
-        {message.type === "link" && message.linkPreview && (
-          <a
-            href={message.linkPreview.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block mb-1 border rounded-lg overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-600"
+
+        {/* Caret menu */}
+        <div className="absolute top-1 right-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+            className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors text-xs opacity-0 group-hover:opacity-100"
+            aria-label="Menu"
           >
-            {message.linkPreview.image && (
+            ▼
+          </button>
+
+          {menuOpen && (
+            <div
+              ref={menuRef}
+              className="absolute top-6 right-0 z-50 bg-white dark:bg-gray-800 shadow-lg rounded-lg border dark:border-gray-700 py-1 min-w-[150px]"
+            >
+              <button
+                onClick={() => setEmojiPickerOpen(!emojiPickerOpen)}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
+              >
+                😊 Reagir
+              </button>
+
+              {emojiPickerOpen && (
+                <div className="flex gap-1 px-3 py-2 border-t dark:border-gray-700">
+                  {REACTION_EMOJIS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => {
+                        reactToMessage(message.id, emoji);
+                        setMenuOpen(false);
+                        setEmojiPickerOpen(false);
+                      }}
+                      className="w-8 h-8 flex items-center justify-center text-lg hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {isOwn && (
+                <button
+                  onClick={() => {
+                    deleteMessage(message.id);
+                    setMenuOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
+                >
+                  🗑 Excluir
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {message.deleted ? (
+          <div className="italic text-gray-400 dark:text-gray-500 text-sm py-3 text-center">
+            mensagem apagada pelo usuario
+          </div>
+        ) : (
+          <>
+            {message.type === "image" && message.imageUrl && (
               <img
-                src={message.linkPreview.image}
-                alt=""
-                className="w-full h-32 object-cover"
+                src={message.imageUrl}
+                alt="Shared image"
+                className="max-w-full rounded-lg mb-1 cursor-pointer"
+                onClick={() => window.open(message.imageUrl, "_blank")}
               />
             )}
-            <div className="p-2">
-              <p className="text-sm font-semibold truncate">
-                {message.linkPreview.title}
-              </p>
-              <p className="text-xs text-gray-500 line-clamp-2">
-                {message.linkPreview.description}
-              </p>
-            </div>
-          </a>
+            {message.type === "link" && message.linkPreview && (
+              <a
+                href={message.linkPreview.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block mb-1 border rounded-lg overflow-hidden hover:bg-gray-50 dark:hover:bg-gray-600"
+              >
+                {message.linkPreview.image && (
+                  <div className="aspect-video overflow-hidden">
+                    <img
+                      src={message.linkPreview.image}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <div className="p-2">
+                  <p className="text-sm font-semibold truncate">
+                    {message.linkPreview.title}
+                  </p>
+                  <p className="text-xs text-gray-500 line-clamp-2">
+                    {message.linkPreview.description}
+                  </p>
+                </div>
+              </a>
+            )}
+            <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">
+              {linkify(message.content)}
+            </p>
+          </>
         )}
-        <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">
-          {linkify(message.content)}
-        </p>
+        {!message.deleted && message.reactions && message.reactions.length > 0 && (
+          <div className={`flex flex-wrap gap-1 mb-1 ${isOwn ? "justify-start" : "justify-end"}`}>
+            {aggregateReactions(message.reactions).map(({ emoji, count, users }) => (
+              <span
+                key={emoji}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-white dark:bg-gray-700 rounded-full border dark:border-gray-600 text-xs shadow-sm cursor-default"
+                title={users.join(", ")}
+              >
+                <span>{emoji}</span>
+                <span className="text-gray-500 dark:text-gray-400">{count}</span>
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="flex justify-end items-center gap-1 mt-1">
           <span className="text-[10px] text-gray-400">
             {formatTimestamp(message.timestamp)}
