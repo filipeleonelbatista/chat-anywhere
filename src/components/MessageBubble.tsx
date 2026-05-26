@@ -77,9 +77,11 @@ function aggregateReactions(reactions: Reaction[]) {
 interface Props {
   message: Message;
   isOwn: boolean;
+  onReply: (message: Message) => void;
+  scrollToMessage: (messageId: string) => void;
 }
 
-export function MessageBubble({ message, isOwn }: Props) {
+export function MessageBubble({ message, isOwn, onReply, scrollToMessage }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
   const { reactToMessage, deleteMessage } = useRoom();
@@ -146,6 +148,32 @@ export function MessageBubble({ message, isOwn }: Props) {
           </p>
         )}
 
+        {/* Reply preview */}
+        {message.replyTo && (
+          <div
+            className="flex items-stretch gap-2 mb-2 cursor-pointer"
+            onClick={() => scrollToMessage(message.replyTo.messageId)}
+          >
+            <div className={`w-1 rounded-full flex-shrink-0 ${
+              message.replyTo.deleted
+                ? "bg-gray-300 dark:bg-gray-500"
+                : "bg-whatsapp-green dark:bg-green-400"
+            }`} />
+            <div className="flex-1 min-w-0 bg-black/5 dark:bg-white/10 rounded p-1.5">
+              <p className="text-xs font-semibold text-whatsapp-green-dark dark:text-whatsapp-green truncate">
+                {message.replyTo.senderName}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {message.replyTo.deleted ? (
+                  <span className="italic">mensagem apagada</span>
+                ) : (
+                  message.replyTo.content
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Caret menu */}
         <div className="absolute top-1 right-1">
           <button
@@ -166,6 +194,16 @@ export function MessageBubble({ message, isOwn }: Props) {
                 className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
               >
                 😊 Reagir
+              </button>
+
+              <button
+                onClick={() => {
+                  onReply(message);
+                  setMenuOpen(false);
+                }}
+                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
+              >
+                ↩ Responder
               </button>
 
               {emojiPickerOpen && (
