@@ -8,14 +8,14 @@ import React, {
   useEffect,
 } from "react";
 import { useSSE } from "@/hooks/useSSE";
-import type { Message, ConnectionStatus, SSEAction } from "@/types";
+import type { Message, ConnectionStatus, SSEAction, ReplyTo } from "@/types";
 
 interface RoomContextType {
   messages: Message[];
   status: ConnectionStatus;
   sendMessage: (
     content: string,
-    opts?: { imageUrl?: string; linkPreview?: Message["linkPreview"] }
+    opts?: { imageUrl?: string; linkPreview?: Message["linkPreview"]; replyTo?: ReplyTo }
   ) => Promise<void>;
   reactToMessage: (messageId: string, emoji: string) => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
@@ -69,11 +69,15 @@ export function RoomProvider({
       );
     } else if (payload.action === "delete") {
       setMessages((prev) =>
-        prev.map((m) =>
-          m.id === payload.messageId
-            ? { ...m, deleted: true, content: "", imageUrl: undefined, linkPreview: undefined, reactions: [] }
-            : m
-        )
+        prev.map((m) => {
+          if (m.replyTo?.messageId === payload.messageId) {
+            return { ...m, replyTo: { ...m.replyTo, deleted: true } };
+          }
+          if (m.id === payload.messageId) {
+            return { ...m, deleted: true, content: "", imageUrl: undefined, linkPreview: undefined, reactions: [] };
+          }
+          return m;
+        })
       );
     }
   }, []);
@@ -83,7 +87,7 @@ export function RoomProvider({
   const sendMessage = useCallback(
     async (
       content: string,
-      opts?: { imageUrl?: string; linkPreview?: Message["linkPreview"] }
+      opts?: { imageUrl?: string; linkPreview?: Message["linkPreview"]; replyTo?: ReplyTo }
     ) => {
       const tempId = crypto.randomUUID();
       const pendingMessage: Message = {
@@ -100,6 +104,7 @@ export function RoomProvider({
             : ("text" as const),
         ...(opts?.imageUrl && { imageUrl: opts.imageUrl }),
         ...(opts?.linkPreview && { linkPreview: opts.linkPreview }),
+        ...(opts?.replyTo && { replyTo: opts.replyTo }),
         status: "pending",
         timestamp: Date.now(),
         createdAt: new Date().toISOString(),
