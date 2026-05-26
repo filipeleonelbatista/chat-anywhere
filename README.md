@@ -111,7 +111,7 @@ O histórico de cada sala é uma **janela móvel de 24 horas** por `timestamp` d
 
 **Presença (balões “entrou / saiu”):** a contagem de abas por usuário usa **Redis** (`SADD`/`SREM` em `room:{roomId}:presence:user:{userId}` com TTL), para que várias instâncias serverless não dupliquem join/leave. O mapa de conexões SSE em memória continua só na instância atual — por exemplo, o modal “Pessoas” (`getRoomUsers`) ainda lista apenas quem está conectado à **mesma** instância; alinhar isso ao Redis pode ser um passo futuro.
 
-O `vercel.json` agenda um cron **a cada hora** em `/api/cron/clean-blobs`, que remove blobs com prefixo `chat-images/` e idade superior a 24 horas. Na Vercel, defina `CRON_SECRET` no projeto; o cron envia `Authorization: Bearer <CRON_SECRET>` automaticamente. Para testar localmente:
+O `vercel.json` agenda um cron **todo domingo à meia-noite (UTC)** em `/api/cron/clean-blobs` (`0 0 * * 0`), que remove blobs com prefixo `chat-images/` e idade superior a 24 horas. Na Vercel, defina `CRON_SECRET` no projeto; o cron envia `Authorization: Bearer <CRON_SECRET>` automaticamente. Para testar localmente:
 
 ```bash
 curl -s -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/cron/clean-blobs
