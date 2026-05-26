@@ -1,5 +1,5 @@
 import { kv } from "@vercel/kv";
-import type { Message, MessageStatus, Reaction } from "@/types";
+import type { Message, MessageStatus, Reaction, ReplyTo } from "@/types";
 
 const MESSAGE_TTL = 86400; // 24 hours in seconds
 const MESSAGE_BATCH = 20;
@@ -20,6 +20,7 @@ export interface StoredMessage {
     image?: string;
   };
   reactions?: Reaction[];
+  replyTo?: ReplyTo;
   timestamp: number;
   createdAt: string;
 }
@@ -92,6 +93,7 @@ export async function getMessages(
         linkPreview: fields.linkPreview ? JSON.parse(fields.linkPreview) : undefined,
         status: (fields.status as MessageStatus) || "sent",
         reactions: fields.reactions ? JSON.parse(fields.reactions) : [],
+        replyTo: fields.replyTo ? JSON.parse(fields.replyTo) : undefined,
         deleted: fields.deleted === "true",
         timestamp: Number(fields.timestamp),
         createdAt: fields.createdAt,
@@ -128,6 +130,7 @@ export async function getRecentMessages(
         linkPreview: fields.linkPreview ? JSON.parse(fields.linkPreview) : undefined,
         status: (fields.status as MessageStatus) || "sent",
         reactions: fields.reactions ? JSON.parse(fields.reactions) : [],
+        replyTo: fields.replyTo ? JSON.parse(fields.replyTo) : undefined,
         deleted: fields.deleted === "true",
         timestamp: Number(fields.timestamp),
         createdAt: fields.createdAt,

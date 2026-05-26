@@ -41,7 +41,7 @@ export async function POST(
     );
   }
 
-  const { content, type, senderId, senderName, senderAvatar, imageUrl, linkPreview, tempId } = await request.json();
+  const { content, type, senderId, senderName, senderAvatar, imageUrl, linkPreview, tempId, replyTo } = await request.json();
   const roomUsers = getRoomUsers(roomId);
   const otherUsers = roomUsers.filter((u) => u.id !== userId);
   const status: MessageStatus = otherUsers.length > 0 ? "delivered" : "sent";
@@ -56,6 +56,7 @@ export async function POST(
     type: (type as MessageType) || "text",
     ...(imageUrl && { imageUrl }),
     ...(linkPreview && { linkPreview }),
+    ...(replyTo && { replyTo }),
     status,
     timestamp: Date.now(),
     createdAt: new Date().toISOString(),

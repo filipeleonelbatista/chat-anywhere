@@ -19,6 +19,13 @@ export interface LinkPreview {
   image?: string;
 }
 
+export interface ReplyTo {
+  messageId: string;
+  senderName: string;
+  content: string;
+  deleted?: boolean;
+}
+
 export interface Message {
   id: string;
   roomId: string;
@@ -31,6 +38,7 @@ export interface Message {
   linkPreview?: LinkPreview;
   status: MessageStatus;
   reactions?: Reaction[];
+  replyTo?: ReplyTo;
   deleted?: boolean;
   timestamp: number;
   createdAt: string;
