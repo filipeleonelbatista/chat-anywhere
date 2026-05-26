@@ -62,7 +62,7 @@ export async function POST(
   };
 
   await saveMessage(roomId, message);
-  broadcastToRoom(roomId, { message, tempId });
+  broadcastToRoom(roomId, { action: "message", message, tempId });
 
-  return NextResponse.json({ message, tempId }, { status: 201 });
+  return NextResponse.json({ action: "message", message, tempId }, { status: 201 });
 }
