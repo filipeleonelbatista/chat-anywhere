@@ -1,5 +1,5 @@
 import { kv } from "@vercel/kv";
-import type { Message, MessageStatus } from "@/types";
+import type { Message, MessageStatus, Reaction } from "@/types";
 
 const MESSAGE_TTL = 86400; // 24 hours in seconds
 const MESSAGE_BATCH = 20;
@@ -19,6 +19,7 @@ export interface StoredMessage {
     description: string;
     image?: string;
   };
+  reactions?: Reaction[];
   timestamp: number;
   createdAt: string;
 }
