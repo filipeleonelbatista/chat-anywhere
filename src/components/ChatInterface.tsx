@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useUser } from "@/context/UserContext";
 import { RoomProvider } from "@/context/RoomContext";
 import { useRoom } from "@/context/RoomContext";
@@ -11,7 +11,7 @@ import { HelpModal } from "./HelpModal";
 import { ThemeToggle } from "./ThemeToggle";
 import { PeopleModal } from "./PeopleModal";
 import { uploadImage } from "@/lib/blob";
-import type { LinkPreview } from "@/types";
+import type { LinkPreview, Message, ReplyTo } from "@/types";
 
 interface Props {
   roomId: string;
@@ -30,8 +30,23 @@ function ChatContent({ roomId }: { roomId: string }) {
     loadingOlder,
   } = useRoom();
 
+  const [replyingTo, setReplyingTo] = useState<ReplyTo | null>(null);
+
+  const handleReply = useCallback((message: Message) => {
+    setReplyingTo({
+      messageId: message.id,
+      senderName: message.senderName,
+      content: message.content.slice(0, 80),
+    });
+  }, []);
+
+  const handleCancelReply = useCallback(() => {
+    setReplyingTo(null);
+  }, []);
+
   const handleSend = (content: string, linkPreview?: LinkPreview) => {
-    sendMessage(content, { linkPreview });
+    sendMessage(content, { linkPreview, replyTo: replyingTo || undefined });
+    setReplyingTo(null);
   };
 
   const handleSendImage = async (file: File) => {
@@ -104,12 +119,15 @@ function ChatContent({ roomId }: { roomId: string }) {
         onLoadOlder={loadOlderMessages}
         hasMore={hasMoreMessages}
         loadingOlder={loadingOlder}
+        onReply={handleReply}
       />
       {/* Input */}
       <MessageInput
         onSend={handleSend}
         onSendImage={handleSendImage}
         disabled={status.type === "disconnected"}
+        replyingTo={replyingTo}
+        onCancelReply={handleCancelReply}
       />
       {/* Help Modal */}
       <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
