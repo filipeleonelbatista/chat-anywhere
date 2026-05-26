@@ -44,6 +44,20 @@ export async function saveMessage(
   ]);
 }
 
+export async function updateMessage(
+  roomId: string,
+  messageId: string,
+  fields: Record<string, unknown>
+): Promise<void> {
+  const messageKey = `message:${messageId}`;
+  await kv.hset(
+    messageKey,
+    Object.fromEntries(
+      Object.entries(fields).filter(([, v]) => v != null)
+    )
+  );
+}
+
 export async function getMessages(
   roomId: string,
   opts: { since?: number; limit?: number } = {}
@@ -76,6 +90,8 @@ export async function getMessages(
         imageUrl: fields.imageUrl,
         linkPreview: fields.linkPreview ? JSON.parse(fields.linkPreview) : undefined,
         status: (fields.status as MessageStatus) || "sent",
+        reactions: fields.reactions ? JSON.parse(fields.reactions) : [],
+        deleted: fields.deleted === "true",
         timestamp: Number(fields.timestamp),
         createdAt: fields.createdAt,
       };
@@ -110,6 +126,8 @@ export async function getRecentMessages(
         imageUrl: fields.imageUrl,
         linkPreview: fields.linkPreview ? JSON.parse(fields.linkPreview) : undefined,
         status: (fields.status as MessageStatus) || "sent",
+        reactions: fields.reactions ? JSON.parse(fields.reactions) : [],
+        deleted: fields.deleted === "true",
         timestamp: Number(fields.timestamp),
         createdAt: fields.createdAt,
       };
