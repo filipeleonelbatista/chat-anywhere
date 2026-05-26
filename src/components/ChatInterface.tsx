@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { useUser } from "@/context/UserContext";
 import { RoomProvider } from "@/context/RoomContext";
 import { useRoom } from "@/context/RoomContext";
@@ -44,10 +44,10 @@ function ChatContent({ roomId }: { roomId: string }) {
     setReplyingTo(null);
   }, []);
 
-  const handleSend = (content: string, linkPreview?: LinkPreview) => {
-    sendMessage(content, { linkPreview, replyTo: replyingTo || undefined });
+  const handleSend = useCallback((content: string, linkPreview?: LinkPreview) => {
+    sendMessage(content, { linkPreview, replyTo: replyingTo ?? undefined });
     setReplyingTo(null);
-  };
+  }, [replyingTo, sendMessage]);
 
   const handleSendImage = async (file: File) => {
     try {
