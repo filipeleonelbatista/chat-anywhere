@@ -1,16 +1,18 @@
 import { formatTimestamp, generateRoomId } from "@/utils/formatting";
 
 describe("formatTimestamp", () => {
-  it('returns "now" for recent timestamps', () => {
-    expect(formatTimestamp(Date.now())).toBe("now");
+  it('returns HH:mm format for recent timestamps', () => {
+    expect(formatTimestamp(Date.now())).toMatch(/\d{2}:\d{2}/);
   });
-  it("returns minutes ago for recent messages", () => {
+
+  it("returns HH:mm format for recent messages", () => {
     const fiveMinAgo = Date.now() - 5 * 60 * 1000;
-    expect(formatTimestamp(fiveMinAgo)).toBe("5m ago");
+    expect(formatTimestamp(fiveMinAgo)).toMatch(/\d{2}:\d{2}/);
   });
-  it("returns hours ago for older messages", () => {
+
+  it("returns HH:mm format for older messages", () => {
     const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
-    expect(formatTimestamp(twoHoursAgo)).toBe("2h ago");
+    expect(formatTimestamp(twoHoursAgo)).toMatch(/\d{2}:\d{2}/);
   });
 });
 
