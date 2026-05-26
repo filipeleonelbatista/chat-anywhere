@@ -1,5 +1,7 @@
 export type MessageType = "text" | "image" | "link";
 
+export type MessageStatus = "pending" | "sent" | "delivered";
+
 export interface LinkPreview {
   url: string;
   title: string;
@@ -17,6 +19,7 @@ export interface Message {
   type: MessageType;
   imageUrl?: string;
   linkPreview?: LinkPreview;
+  status: MessageStatus;
   timestamp: number;
   createdAt: string;
 }
