@@ -91,7 +91,7 @@ export function MessageInput({ onSend, onSendImage, disabled, replyingTo, onCanc
           </div>
           <button
             type="button"
-            onClick={onCancelReply}
+            onClick={() => onCancelReply?.()}
             className="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-black/5 dark:hover:bg-white/10 flex-shrink-0"
             aria-label="Cancelar reply"
           >
