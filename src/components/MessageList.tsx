@@ -10,6 +10,7 @@ interface Props {
   onLoadOlder: () => void;
   hasMore: boolean;
   loadingOlder: boolean;
+  onReply: (message: Message) => void;
 }
 
 export function MessageList({
@@ -18,6 +19,7 @@ export function MessageList({
   onLoadOlder,
   hasMore,
   loadingOlder,
+  onReply,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -58,6 +60,17 @@ export function MessageList({
     }
   }, [hasMore, loadingOlder, onLoadOlder]);
 
+  const scrollToMessage = useCallback((messageId: string) => {
+    const el = document.getElementById(`msg-${messageId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-whatsapp-green", "ring-opacity-50");
+      setTimeout(() => {
+        el.classList.remove("ring-2", "ring-whatsapp-green", "ring-opacity-50");
+      }, 1500);
+    }
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -72,11 +85,14 @@ export function MessageList({
         </div>
       )}
       {messages.map((msg) => (
-        <MessageBubble
-          key={msg.id}
-          message={msg}
-          isOwn={msg.senderId === userId}
-        />
+        <div key={msg.id} id={`msg-${msg.id}`}>
+          <MessageBubble
+            message={msg}
+            isOwn={msg.senderId === userId}
+            onReply={onReply}
+            scrollToMessage={scrollToMessage}
+          />
+        </div>
       ))}
       <div ref={bottomRef} />
       <NewMessageIndicator count={newCount} onClick={scrollToBottom} />
