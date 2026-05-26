@@ -152,7 +152,10 @@ export function MessageBubble({ message, isOwn, onReply, scrollToMessage }: Prop
         {message.replyTo && (
           <div
             className="flex items-stretch gap-2 mb-2 cursor-pointer"
-            onClick={() => scrollToMessage(message.replyTo.messageId)}
+            onClick={(e) => { e.stopPropagation(); scrollToMessage(message.replyTo!.messageId); }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); scrollToMessage(message.replyTo!.messageId); } }}
           >
             <div className={`w-1 rounded-full flex-shrink-0 ${
               message.replyTo.deleted
